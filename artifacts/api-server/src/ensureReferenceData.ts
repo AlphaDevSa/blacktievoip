@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import {
   db,
   adminsTable,
+  resellersTable,
   companySettingsTable,
   areaCodesTable,
   serviceCategoriesTable,
@@ -13,10 +14,31 @@ import {
 
 export async function ensureReferenceData() {
   await ensureAdmin();
+  await ensureReseller();
   await ensureCompanySettings();
   await ensureAreaCodes();
   await ensureServiceCatalog();
   await ensureProductCatalog();
+}
+
+async function ensureReseller() {
+  const existing = await db
+    .select({ id: resellersTable.id })
+    .from(resellersTable)
+    .where(eq(resellersTable.email, "reseller@blacktievoip.co.za"));
+
+  if (existing.length === 0) {
+    const passwordHash = await bcrypt.hash("Reseller1234!", 10);
+    await db.insert(resellersTable).values({
+      email: "reseller@blacktievoip.co.za",
+      passwordHash,
+      companyName: "Black Tie VoIP Demo",
+      contactName: "Demo Reseller",
+      phone: "+27 11 000 0001",
+      status: "active",
+    });
+    console.log("[seed] Default reseller account created");
+  }
 }
 
 async function ensureAdmin() {
