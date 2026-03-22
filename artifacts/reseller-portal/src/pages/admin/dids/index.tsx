@@ -223,58 +223,8 @@ export default function AdminDidManager() {
   return (
     <AppLayout role="admin" title="DID Management">
       
-      {/* Area Codes Section */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-primary" /> Area Codes
-          </h2>
-          <button 
-            onClick={() => setIsAreaCodeModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground font-semibold text-sm hover:bg-black/[0.07] transition-colors border border-border"
-          >
-            <Plus className="w-4 h-4" /> Add Area Code
-          </button>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {areaCodes.map((ac: AreaCode, idx) => (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: idx * 0.05 }}
-              key={ac.id}
-              className="bg-card border border-border rounded-xl p-5 shadow-lg shadow-black/10 hover:shadow-xl transition-all"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-2xl font-display font-bold text-primary">{ac.code}</h3>
-                <span className="text-xs font-medium text-muted-foreground bg-black/5 px-2 py-1 rounded-md border border-white/5">{ac.province}</span>
-              </div>
-              <p className="text-sm text-foreground mb-4 font-medium">{ac.region}</p>
-              
-              <div className="flex items-center gap-4 text-xs font-medium">
-                <div className="flex flex-col">
-                  <span className="text-muted-foreground">Total</span>
-                  <span className="text-foreground text-sm">{ac.totalDids}</span>
-                </div>
-                <div className="w-px h-6 bg-border/50"></div>
-                <div className="flex flex-col">
-                  <span className="text-emerald-400">Available</span>
-                  <span className="text-foreground text-sm">{ac.availableDids}</span>
-                </div>
-                <div className="w-px h-6 bg-border/50"></div>
-                <div className="flex flex-col">
-                  <span className="text-blue-400">Assigned</span>
-                  <span className="text-foreground text-sm">{ac.assignedDids}</span>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
       {/* DIDs Section */}
-      <div className="bg-card border border-border rounded-2xl shadow-lg overflow-hidden flex flex-col">
+      <div className="bg-card border border-border rounded-2xl shadow-lg overflow-hidden flex flex-col mb-8">
         {/* Title bar + action buttons */}
         <div className="p-4 border-b border-border/50 flex flex-wrap items-center justify-between gap-3 bg-muted/20">
           <h2 className="text-lg font-display font-bold text-foreground flex items-center gap-2">
@@ -475,6 +425,56 @@ export default function AdminDidManager() {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Area Codes Section */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-primary" /> Area Codes
+          </h2>
+          <button 
+            onClick={() => setIsAreaCodeModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground font-semibold text-sm hover:bg-black/[0.07] transition-colors border border-border"
+          >
+            <Plus className="w-4 h-4" /> Add Area Code
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {areaCodes.map((ac: AreaCode, idx) => (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: idx * 0.05 }}
+              key={ac.id}
+              className="bg-card border border-border rounded-xl p-5 shadow-lg shadow-black/10 hover:shadow-xl transition-all"
+            >
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-2xl font-display font-bold text-primary">{ac.code}</h3>
+                <span className="text-xs font-medium text-muted-foreground bg-black/5 px-2 py-1 rounded-md border border-white/5">{ac.province}</span>
+              </div>
+              <p className="text-sm text-foreground mb-4 font-medium">{ac.region}</p>
+              
+              <div className="flex items-center gap-4 text-xs font-medium">
+                <div className="flex flex-col">
+                  <span className="text-muted-foreground">Total</span>
+                  <span className="text-foreground text-sm">{ac.totalDids}</span>
+                </div>
+                <div className="w-px h-6 bg-border/50"></div>
+                <div className="flex flex-col">
+                  <span className="text-emerald-400">Available</span>
+                  <span className="text-foreground text-sm">{ac.availableDids}</span>
+                </div>
+                <div className="w-px h-6 bg-border/50"></div>
+                <div className="flex flex-col">
+                  <span className="text-blue-400">Assigned</span>
+                  <span className="text-foreground text-sm">{ac.assignedDids}</span>
+                </div>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </div>
 
