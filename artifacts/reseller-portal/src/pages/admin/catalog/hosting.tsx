@@ -67,10 +67,22 @@ export default function AdminWebHostingCatalog() {
     setForm(f => ({ ...f, retailPriceExclVat: val, priceInclVat: incl }));
   };
 
+  const handleRetailInclChange = (val: string) => {
+    const n = parseFloat(val);
+    const excl = !isNaN(n) ? (n / 1.15).toFixed(2) : "";
+    setForm(f => ({ ...f, priceInclVat: val, retailPriceExclVat: excl }));
+  };
+
   const handleResellerChange = (val: string) => {
     const n = parseFloat(val);
     const incl = !isNaN(n) ? (n * 1.15).toFixed(2) : "";
     setForm(f => ({ ...f, resellerPriceExclVat: val, resellerPriceInclVat: incl }));
+  };
+
+  const handleResellerInclChange = (val: string) => {
+    const n = parseFloat(val);
+    const excl = !isNaN(n) ? (n / 1.15).toFixed(2) : "";
+    setForm(f => ({ ...f, resellerPriceInclVat: val, resellerPriceExclVat: excl }));
   };
 
   const openCreate = () => {
@@ -322,23 +334,24 @@ export default function AdminWebHostingCatalog() {
             </div>
 
             <div className="md:col-span-2 border-t border-border pt-3">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Pricing (per month)</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Pricing (per month)</p>
+              <p className="text-xs text-muted-foreground/60 mb-3">Enter either excl or incl VAT — the other field calculates automatically at 15%.</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">Retail excl VAT (R)</label>
                   <input type="number" step="0.01" min="0" value={form.retailPriceExclVat} onChange={e => handleRetailChange(e.target.value)} placeholder="0.00" className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/50 outline-none" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Retail incl VAT (R)</label>
-                  <input type="number" step="0.01" min="0" value={form.priceInclVat} readOnly className="w-full px-4 py-2 bg-muted border border-border rounded-lg outline-none text-muted-foreground" />
+                  <label className="text-sm font-medium">Retail incl VAT (R) <span className="text-primary/60 font-normal text-xs">(auto ↔)</span></label>
+                  <input type="number" step="0.01" min="0" value={form.priceInclVat} onChange={e => handleRetailInclChange(e.target.value)} placeholder="0.00" className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/50 outline-none" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">Reseller excl VAT (R)</label>
                   <input type="number" step="0.01" min="0" value={form.resellerPriceExclVat} onChange={e => handleResellerChange(e.target.value)} placeholder="0.00" className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/50 outline-none" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Reseller incl VAT (R)</label>
-                  <input type="number" step="0.01" min="0" value={form.resellerPriceInclVat} readOnly className="w-full px-4 py-2 bg-muted border border-border rounded-lg outline-none text-muted-foreground" />
+                  <label className="text-sm font-medium">Reseller incl VAT (R) <span className="text-primary/60 font-normal text-xs">(auto ↔)</span></label>
+                  <input type="number" step="0.01" min="0" value={form.resellerPriceInclVat} onChange={e => handleResellerInclChange(e.target.value)} placeholder="0.00" className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/50 outline-none" />
                 </div>
               </div>
             </div>

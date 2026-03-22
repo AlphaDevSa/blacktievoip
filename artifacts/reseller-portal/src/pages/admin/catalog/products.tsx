@@ -71,10 +71,22 @@ export default function AdminProductsCatalog() {
     setProductForm(f => ({ ...f, retailPriceExclVat: val, priceInclVat: inclVat }));
   };
 
+  const handleRetailInclChange = (val: string) => {
+    const num = parseFloat(val);
+    const exclVat = !isNaN(num) ? (num / 1.15).toFixed(2) : "";
+    setProductForm(f => ({ ...f, priceInclVat: val, retailPriceExclVat: exclVat }));
+  };
+
   const handleResellerPriceChange = (val: string) => {
     const num = parseFloat(val);
     const inclVat = !isNaN(num) ? (num * 1.15).toFixed(2) : "";
     setProductForm(f => ({ ...f, resellerPriceExclVat: val, resellerPriceInclVat: inclVat }));
+  };
+
+  const handleResellerInclChange = (val: string) => {
+    const num = parseFloat(val);
+    const exclVat = !isNaN(num) ? (num / 1.15).toFixed(2) : "";
+    setProductForm(f => ({ ...f, resellerPriceInclVat: val, resellerPriceExclVat: exclVat }));
   };
 
   const openCreate = () => {
@@ -625,23 +637,24 @@ export default function AdminProductsCatalog() {
             </div>
 
             <div className="col-span-2 border-t border-border pt-3">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Pricing (once-off)</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Pricing (once-off)</p>
+              <p className="text-xs text-muted-foreground/60 mb-3">Enter either excl or incl VAT — the other field calculates automatically at 15%.</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-1.5">Retail excl VAT (R)</label>
                   <input type="number" step="0.01" min="0" value={productForm.retailPriceExclVat} onChange={e => handleRetailPriceChange(e.target.value)} placeholder="0.00" className="w-full px-4 py-2.5 rounded-xl bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/50 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">Retail incl VAT (R)</label>
-                  <input type="number" step="0.01" min="0" value={productForm.priceInclVat} readOnly className="w-full px-4 py-2.5 rounded-xl bg-muted border border-border text-muted-foreground outline-none" />
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">Retail incl VAT (R) <span className="text-primary/60 font-normal text-xs">(auto ↔)</span></label>
+                  <input type="number" step="0.01" min="0" value={productForm.priceInclVat} onChange={e => handleRetailInclChange(e.target.value)} placeholder="0.00" className="w-full px-4 py-2.5 rounded-xl bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/50 outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-1.5">Reseller excl VAT (R)</label>
                   <input type="number" step="0.01" min="0" value={productForm.resellerPriceExclVat} onChange={e => handleResellerPriceChange(e.target.value)} placeholder="0.00" className="w-full px-4 py-2.5 rounded-xl bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/50 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">Reseller incl VAT (R)</label>
-                  <input type="number" step="0.01" min="0" value={productForm.resellerPriceInclVat} readOnly className="w-full px-4 py-2.5 rounded-xl bg-muted border border-border text-muted-foreground outline-none" />
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">Reseller incl VAT (R) <span className="text-primary/60 font-normal text-xs">(auto ↔)</span></label>
+                  <input type="number" step="0.01" min="0" value={productForm.resellerPriceInclVat} onChange={e => handleResellerInclChange(e.target.value)} placeholder="0.00" className="w-full px-4 py-2.5 rounded-xl bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/50 outline-none" />
                 </div>
               </div>
             </div>

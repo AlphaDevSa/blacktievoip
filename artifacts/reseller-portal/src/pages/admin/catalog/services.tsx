@@ -84,10 +84,22 @@ export default function AdminServicesCatalog() {
     setServiceForm(f => ({ ...f, retailPriceExclVat: val, priceInclVat: inclVat }));
   };
 
+  const handleRetailInclChange = (val: string) => {
+    const num = parseFloat(val);
+    const exclVat = !isNaN(num) ? (num / 1.15).toFixed(2) : "";
+    setServiceForm(f => ({ ...f, priceInclVat: val, retailPriceExclVat: exclVat }));
+  };
+
   const handleResellerPriceChange = (val: string) => {
     const num = parseFloat(val);
     const inclVat = !isNaN(num) ? (num * 1.15).toFixed(2) : "";
     setServiceForm(f => ({ ...f, resellerPriceExclVat: val, resellerPriceInclVat: inclVat }));
+  };
+
+  const handleResellerInclChange = (val: string) => {
+    const num = parseFloat(val);
+    const exclVat = !isNaN(num) ? (num / 1.15).toFixed(2) : "";
+    setServiceForm(f => ({ ...f, resellerPriceInclVat: val, resellerPriceExclVat: exclVat }));
   };
 
   function openCreateCat(parentId?: number) {
@@ -592,10 +604,10 @@ export default function AdminServicesCatalog() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">Retail incl VAT <span className="text-primary/60 font-normal">(auto)</span></label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">Retail incl VAT <span className="text-primary/60 font-normal">(auto ↔)</span></label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">R</span>
-                      <input type="number" step="0.01" min="0" value={serviceForm.priceInclVat} onChange={e => setServiceForm(f => ({...f, priceInclVat: e.target.value}))} className="w-full pl-7 pr-3 py-2.5 rounded-xl bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm" placeholder="0.00" />
+                      <input type="number" step="0.01" min="0" value={serviceForm.priceInclVat} onChange={e => handleRetailInclChange(e.target.value)} className="w-full pl-7 pr-3 py-2.5 rounded-xl bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm" placeholder="0.00" />
                     </div>
                   </div>
                   <div>
@@ -606,14 +618,14 @@ export default function AdminServicesCatalog() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">Reseller incl VAT <span className="text-primary/60 font-normal">(auto)</span></label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">Reseller incl VAT <span className="text-primary/60 font-normal">(auto ↔)</span></label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">R</span>
-                      <input type="number" step="0.01" min="0" value={serviceForm.resellerPriceInclVat} onChange={e => setServiceForm(f => ({...f, resellerPriceInclVat: e.target.value}))} className="w-full pl-7 pr-3 py-2.5 rounded-xl bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm" placeholder="0.00" />
+                      <input type="number" step="0.01" min="0" value={serviceForm.resellerPriceInclVat} onChange={e => handleResellerInclChange(e.target.value)} className="w-full pl-7 pr-3 py-2.5 rounded-xl bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm" placeholder="0.00" />
                     </div>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground/60">Incl VAT fields auto-fill at 15% when you enter the excl VAT price. You can override them manually.</p>
+                <p className="text-xs text-muted-foreground/60">Enter either excl or incl VAT — the other field calculates automatically at 15%.</p>
               </div>
             </div>
 
