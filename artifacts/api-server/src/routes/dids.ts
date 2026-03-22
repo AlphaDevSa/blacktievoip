@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { db } from "@workspace/db";
 import { areaCodesTable, didsTable, resellersTable, clientsTable } from "@workspace/db";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql, and, inArray } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -423,7 +423,50 @@ router.get("/reseller/area-codes", requireReseller, async (_req, res) => {
         return { id: ac.id, code: ac.code, region: ac.region, province: ac.province, availableCount: count };
       })
     );
-    return res.json(result.filter((ac) => ac.availableCount > 0));
+    return res.json(result);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/reseller/dids/request-bulk", requireReseller, async (req, res) => {
+  try {
+    const resellerId = (req.session as any).userId;
+    const { areaCodeId, quantity } = req.body;
+
+    if (!areaCodeId || !quantity || quantity < 1) {
+      return res.status(400).json({ error: "Area code and quantity are required" });
+    }
+    if (quantity > 50) {
+      return res.status(400).json({ error: "Maximum 50 DIDs per request" });
+    }
+
+    const available = await db
+      .select()
+      .from(didsTable)
+      .where(and(eq(didsTable.areaCodeId, areaCodeId), eq(didsTable.status, "available")))
+      .limit(quantity)
+      .orderBy(didsTable.number);
+
+    if (available.length === 0) {
+      return res.status(400).json({ error: "No available DIDs for this area code. Please contact your administrator." });
+    }
+    if (available.length < quantity) {
+      return res.status(400).json({ error: `Only ${available.length} DID(s) available for this area code` });
+    }
+
+    const ids = available.map((d) => d.id);
+    await db
+      .update(didsTable)
+      .set({ resellerId, status: "assigned", assignedAt: new Date() })
+      .where(inArray(didsTable.id, ids));
+
+    return res.json({
+      success: true,
+      message: `Successfully claimed ${available.length} DID(s)`,
+      count: available.length,
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });

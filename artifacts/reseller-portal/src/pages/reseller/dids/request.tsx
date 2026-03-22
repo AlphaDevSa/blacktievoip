@@ -1,153 +1,181 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { 
-  useResellerGetAreaCodes, 
-  useResellerGetAvailableDids,
-  useResellerRequestDid,
-  AreaCodeWithCount,
-  Did
-} from "@workspace/api-client-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, PhoneCall, CheckCircle2, ArrowLeft } from "lucide-react";
+import { useResellerGetAreaCodes, AreaCodeWithCount } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { MapPin, PhoneCall, Hash, ChevronRight, Loader2, ChevronDown } from "lucide-react";
+
+const SA_AREA_CODES = [
+  "010","012","013","014","015","016","017","018",
+  "021","022","023","027","028",
+  "031","032","033","034","035","036","039",
+  "041","042","043","044","045","046","047","048","049",
+  "051","053","054","056","057","058",
+  "086","087",
+];
 
 export default function ResellerRequestDid() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  
-  const { data: areaCodes = [], isLoading: loadingAC } = useResellerGetAreaCodes();
-  const [selectedAreaCodeId, setSelectedAreaCodeId] = useState<number | null>(null);
 
-  const { data: availableDids = [], isLoading: loadingDids } = useResellerGetAvailableDids(
-    { areaCodeId: selectedAreaCodeId! },
-    { query: { enabled: selectedAreaCodeId !== null } }
-  );
+  const { data: areaCodes = [], isLoading } = useResellerGetAreaCodes();
 
-  const requestDid = useResellerRequestDid();
+  const [selectedAreaCodeId, setSelectedAreaCodeId] = useState<number | "">("");
+  const [quantity, setQuantity] = useState<number>(1);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleRequest = async (didId: number, numberStr: string) => {
+  const orderedAreaCodes = SA_AREA_CODES
+    .map((code) => areaCodes.find((ac: AreaCodeWithCount) => ac.code === code))
+    .filter(Boolean) as AreaCodeWithCount[];
+
+  const selectedAc = orderedAreaCodes.find((ac) => ac.id === selectedAreaCodeId);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAreaCodeId || quantity < 1) return;
+
+    setSubmitting(true);
     try {
-      await requestDid.mutateAsync({ id: didId });
-      toast({ title: `Successfully claimed ${numberStr}` });
+      const res = await fetch("/api/reseller/dids/request-bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ areaCodeId: selectedAreaCodeId, quantity }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast({ title: "Request Failed", description: data.error, variant: "destructive" });
+        return;
+      }
+
+      toast({ title: "DIDs Claimed!", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/reseller/dids"] });
       queryClient.invalidateQueries({ queryKey: ["/api/reseller/area-codes"] });
       setLocation("/reseller/dids");
-    } catch (err) {
-      toast({ title: "Failed to claim DID", variant: "destructive" });
+    } catch {
+      toast({ title: "Request Failed", description: "An unexpected error occurred.", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <AppLayout role="reseller" title="Request New DID">
-      <div className="max-w-5xl mx-auto">
-        
-        {/* Progress Tracker */}
-        <div className="flex items-center justify-center mb-10">
-          <div className="flex items-center gap-4">
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold border-2 transition-colors ${!selectedAreaCodeId ? 'bg-primary text-primary-foreground border-primary' : 'bg-primary/20 text-primary border-primary'}`}>
-              1
-            </div>
-            <div className="w-16 h-1 rounded-full bg-border overflow-hidden">
-              <div className={`h-full bg-primary transition-all duration-500 ${selectedAreaCodeId ? 'w-full' : 'w-0'}`} />
-            </div>
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold border-2 transition-colors ${selectedAreaCodeId ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border'}`}>
-              2
-            </div>
+      <div className="max-w-xl mx-auto">
+
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-4">
+            <PhoneCall className="w-7 h-7 text-primary" />
           </div>
+          <h2 className="text-2xl font-display font-bold text-foreground">Request New DID Numbers</h2>
+          <p className="text-muted-foreground mt-1.5 text-sm">
+            Select an area code and the quantity of numbers you need.
+          </p>
         </div>
 
-        <AnimatePresence mode="wait">
-          {!selectedAreaCodeId ? (
-            <motion.div 
-              key="step1"
-              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-            >
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-display font-bold text-foreground">Select an Area Code</h2>
-                <p className="text-muted-foreground mt-2">Choose the region where you need a new phone number.</p>
-              </div>
+        {/* Form card */}
+        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+          <form onSubmit={handleSubmit} className="space-y-6">
 
-              {loadingAC ? (
-                <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {areaCodes.map((ac: AreaCodeWithCount) => (
-                    <button
-                      key={ac.id}
-                      onClick={() => ac.availableCount > 0 && setSelectedAreaCodeId(ac.id)}
-                      disabled={ac.availableCount === 0}
-                      className={`relative flex flex-col items-center justify-center p-6 rounded-2xl border text-center transition-all duration-300 ${
-                        ac.availableCount > 0 
-                          ? "bg-card border-border hover:border-primary hover:shadow-lg hover:shadow-primary/10 cursor-pointer" 
-                          : "bg-muted/10 border-border/50 opacity-60 cursor-not-allowed"
-                      }`}
-                    >
-                      <MapPin className={`w-8 h-8 mb-3 ${ac.availableCount > 0 ? "text-primary" : "text-muted-foreground"}`} />
-                      <span className="text-3xl font-display font-bold text-foreground leading-none mb-1">{ac.code}</span>
-                      <span className="text-sm font-medium text-muted-foreground mb-4">{ac.region}</span>
-                      
-                      <div className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        ac.availableCount > 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
-                      }`}>
-                        {ac.availableCount} Available
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          ) : (
-            <motion.div 
-              key="step2"
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-            >
-              <div className="flex items-center justify-between mb-8 bg-card border border-border p-4 rounded-2xl">
-                <button 
-                  onClick={() => setSelectedAreaCodeId(null)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-black/5 text-muted-foreground transition-colors font-medium text-sm"
-                >
-                  <ArrowLeft className="w-4 h-4" /> Back to Area Codes
-                </button>
-                <div className="text-right">
-                  <h2 className="text-xl font-display font-bold text-foreground">Choose Number</h2>
-                  <p className="text-xs text-muted-foreground">Select from available numbers</p>
-                </div>
-              </div>
+            {/* Area Code Dropdown */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <MapPin className="w-4 h-4 text-primary" />
+                Area Code
+              </label>
 
-              {loadingDids ? (
-                <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>
-              ) : availableDids.length === 0 ? (
-                <div className="text-center py-12 bg-card rounded-2xl border border-dashed border-border">
-                  <p className="text-muted-foreground">No numbers currently available in this area code.</p>
+              {isLoading ? (
+                <div className="flex items-center gap-2 px-4 py-3 bg-muted/30 border border-border rounded-xl text-muted-foreground text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading area codes…
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {availableDids.map((did: Did, idx) => (
-                    <div key={did.id} className="bg-card border border-border rounded-xl p-5 flex items-center justify-between group hover:border-primary/50 transition-colors shadow-sm">
-                      <div className="flex items-center gap-4">
-                        <div className="p-2 bg-primary/10 text-primary rounded-lg">
-                          <PhoneCall className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="font-mono text-lg font-bold text-foreground tracking-wider">{did.number}</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleRequest(did.id, did.number)}
-                        disabled={requestDid.isPending}
-                        className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground font-semibold text-sm rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
-                      >
-                        Claim <CheckCircle2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+                <div className="relative">
+                  <select
+                    value={selectedAreaCodeId}
+                    onChange={(e) => setSelectedAreaCodeId(e.target.value ? Number(e.target.value) : "")}
+                    required
+                    className="w-full appearance-none px-4 py-3 pr-10 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all cursor-pointer"
+                  >
+                    <option value="" disabled>Select an area code…</option>
+                    {orderedAreaCodes.map((ac) => (
+                      <option key={ac.id} value={ac.id}>
+                        {ac.code} — {ac.region}{ac.province ? ` (${ac.province})` : ""}
+                        {ac.availableCount > 0 ? ` · ${ac.availableCount} available` : " · contact admin"}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                 </div>
               )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+              {/* Selected preview */}
+              {selectedAc && (
+                <div className="flex items-center gap-3 px-4 py-2.5 bg-primary/5 border border-primary/20 rounded-xl">
+                  <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-primary">{selectedAc.code}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{selectedAc.region}</p>
+                    <p className="text-xs text-muted-foreground">{selectedAc.province}</p>
+                  </div>
+                  <div className={`ml-auto px-2.5 py-1 rounded-full text-xs font-bold ${
+                    selectedAc.availableCount > 0
+                      ? "bg-emerald-500/10 text-emerald-500"
+                      : "bg-amber-500/10 text-amber-500"
+                  }`}>
+                    {selectedAc.availableCount > 0 ? `${selectedAc.availableCount} available` : "Request from admin"}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Quantity Input */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Hash className="w-4 h-4 text-primary" />
+                Quantity
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={quantity}
+                onChange={(e) => setQuantity(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))}
+                required
+                className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                placeholder="1"
+              />
+              <p className="text-xs text-muted-foreground">Maximum 50 DIDs per request.</p>
+            </div>
+
+            {/* Summary */}
+            {selectedAc && quantity > 0 && (
+              <div className="bg-muted/30 border border-border rounded-xl px-4 py-3 flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">You are requesting</span>
+                <span className="font-bold text-foreground">
+                  {quantity} × {selectedAc.code} number{quantity !== 1 ? "s" : ""}
+                </span>
+              </div>
+            )}
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={!selectedAreaCodeId || quantity < 1 || submitting}
+              className="w-full flex items-center justify-center gap-2 py-3.5 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-semibold rounded-xl shadow-lg shadow-primary/20 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+            >
+              {submitting ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Processing…</>
+              ) : (
+                <><ChevronRight className="w-4 h-4" /> Request DIDs</>
+              )}
+            </button>
+          </form>
+        </div>
 
       </div>
     </AppLayout>
