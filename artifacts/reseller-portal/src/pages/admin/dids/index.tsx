@@ -185,7 +185,7 @@ export default function AdminDidManager() {
       });
       setImportStep("preview");
     } catch (err: any) {
-      const msg = err?.response?.data?.error ?? err?.message ?? "Failed to fetch sheet";
+      const msg = err?.data?.error ?? err?.message ?? "Failed to fetch sheet";
       setImportError(msg);
     }
   };
@@ -205,7 +205,7 @@ export default function AdminDidManager() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/dids"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/area-codes"] });
     } catch (err: any) {
-      const msg = err?.response?.data?.error ?? err?.message ?? "Import failed";
+      const msg = err?.data?.error ?? err?.message ?? "Import failed";
       setImportError(msg);
       setImportStep("preview");
     }

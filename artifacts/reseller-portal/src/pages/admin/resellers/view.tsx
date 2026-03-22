@@ -65,7 +65,7 @@ export default function AdminResellerView() {
       toast({ title: "Success", description: "Reseller updated successfully." });
       setIsEditing(false);
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error?.response?.data?.error || "Update failed." });
+      toast({ variant: "destructive", title: "Error", description: error?.data?.error || "Update failed." });
     }
   };
 

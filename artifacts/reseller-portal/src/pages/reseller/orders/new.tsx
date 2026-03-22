@@ -359,7 +359,7 @@ export default function ResellerNewOrder() {
       });
       setSubmitted(true);
     } catch (err: any) {
-      const msg = err?.response?.data?.error ?? "Failed to place order";
+      const msg = err?.data?.error ?? "Failed to place order";
       toast({ title: msg, variant: "destructive" });
     }
   };

@@ -36,7 +36,7 @@ export default function AdminCreateReseller() {
       toast({ 
         variant: "destructive", 
         title: "Error", 
-        description: error?.response?.data?.error || "Failed to create reseller." 
+        description: error?.data?.error || "Failed to create reseller." 
       });
     }
   };

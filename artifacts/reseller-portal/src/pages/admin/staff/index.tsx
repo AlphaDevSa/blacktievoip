@@ -77,7 +77,7 @@ export default function AdminStaff() {
       setModalMode(null);
       invalidate();
     } catch (err: any) {
-      toast({ title: err?.response?.data?.error ?? "Error creating staff member", variant: "destructive" });
+      toast({ title: err?.data?.error ?? "Error creating staff member", variant: "destructive" });
     }
   };
 
@@ -90,7 +90,7 @@ export default function AdminStaff() {
       setModalMode(null);
       invalidate();
     } catch (err: any) {
-      toast({ title: err?.response?.data?.error ?? "Error updating staff member", variant: "destructive" });
+      toast({ title: err?.data?.error ?? "Error updating staff member", variant: "destructive" });
     }
   };
 
@@ -112,7 +112,7 @@ export default function AdminStaff() {
       toast({ title: "Staff member deleted" });
       invalidate();
     } catch (err: any) {
-      toast({ title: err?.response?.data?.error ?? "Error deleting staff member", variant: "destructive" });
+      toast({ title: err?.data?.error ?? "Error deleting staff member", variant: "destructive" });
     }
     setOpenMenuId(null);
   };
@@ -129,7 +129,7 @@ export default function AdminStaff() {
       toast({ title: "Password reset successfully" });
       setModalMode(null);
     } catch (err: any) {
-      toast({ title: err?.response?.data?.error ?? "Error resetting password", variant: "destructive" });
+      toast({ title: err?.data?.error ?? "Error resetting password", variant: "destructive" });
     }
   };
 

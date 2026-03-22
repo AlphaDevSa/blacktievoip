@@ -38,7 +38,7 @@ export default function ResellerCreateClient() {
       toast({ 
         variant: "destructive", 
         title: "Error", 
-        description: error?.response?.data?.error || "Failed to create client." 
+        description: error?.data?.error || "Failed to create client." 
       });
     }
   };

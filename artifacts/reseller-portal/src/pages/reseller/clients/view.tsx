@@ -114,7 +114,7 @@ export default function ResellerClientView() {
       toast({ title: "Success", description: "Client details updated." });
       setIsEditing(false);
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error?.response?.data?.error || "Update failed." });
+      toast({ variant: "destructive", title: "Error", description: error?.data?.error || "Update failed." });
     }
   };
 

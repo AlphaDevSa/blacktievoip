@@ -94,7 +94,7 @@ export default function Login() {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error?.response?.data?.error || "Invalid credentials. Please try again.",
+        description: error?.data?.error || "Invalid credentials. Please try again.",
       });
     }
   };
@@ -109,7 +109,7 @@ export default function Login() {
       toast({
         variant: "destructive",
         title: "Registration Failed",
-        description: error?.response?.data?.error || "Could not complete registration. Please try again.",
+        description: error?.data?.error || "Could not complete registration. Please try again.",
       });
     }
   };
