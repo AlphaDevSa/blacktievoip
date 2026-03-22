@@ -78,16 +78,16 @@ function CartItemRow({
         <p className="font-semibold text-foreground text-xs truncate">{item.name}</p>
         {item.itemType === "domain" ? (
           <p className="text-xs text-muted-foreground">
-            {item.unitPriceInclVat > 0 ? `${formatZar(item.unitPriceInclVat)} incl VAT` : "Domain Registration"}
+            {item.unitPriceExclVat > 0 ? `${formatZar(item.unitPriceExclVat)} excl VAT` : "Domain Registration"}
           </p>
         ) : (item.itemType === "service" || item.itemType === "hosting" || item.itemType === "did") ? (
           <p className="text-xs text-muted-foreground">
-            {formatZar(item.unitPriceInclVat)} × {item.quantity} = <span className="text-foreground font-semibold">{formatZar(item.unitPriceInclVat * item.quantity)}</span>
+            {formatZar(item.unitPriceExclVat)} excl VAT × {item.quantity} = <span className="text-foreground font-semibold">{formatZar(item.unitPriceExclVat * item.quantity)}</span>
             <span className="text-muted-foreground/70 ml-1">/month</span>
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            {formatZar(item.unitPriceInclVat)} × {item.quantity} = <span className="text-foreground font-semibold">{formatZar(item.unitPriceInclVat * item.quantity)}</span>
+            {formatZar(item.unitPriceExclVat)} excl VAT × {item.quantity} = <span className="text-foreground font-semibold">{formatZar(item.unitPriceExclVat * item.quantity)}</span>
           </p>
         )}
       </div>
@@ -308,22 +308,28 @@ export default function ResellerNewOrder() {
     setCart(prev => prev.filter(c => !(c.itemType === "domain" && c.name === `Domain: ${domainName}`)));
   };
 
+  // Excl VAT totals are the source of truth — incl VAT is always exclVat × 1.15
   const dueNowExclVat = cart.filter(c => c.itemType === "product" || c.itemType === "domain").reduce((sum, c) => sum + c.unitPriceExclVat * c.quantity, 0);
-  const dueNowInclVat = cart.filter(c => c.itemType === "product" || c.itemType === "domain").reduce((sum, c) => sum + c.unitPriceInclVat * c.quantity, 0);
+  const dueNowVat = dueNowExclVat * 0.15;
+  const dueNowInclVat = dueNowExclVat + dueNowVat;
+
   const monthlyExclVat = cart.filter(c => c.itemType === "service" || c.itemType === "hosting" || c.itemType === "did").reduce((sum, c) => sum + c.unitPriceExclVat * c.quantity, 0);
-  const monthlyInclVat = cart.filter(c => c.itemType === "service" || c.itemType === "hosting" || c.itemType === "did").reduce((sum, c) => sum + c.unitPriceInclVat * c.quantity, 0);
-  const hasMonthly = monthlyInclVat > 0;
+  const monthlyVat = monthlyExclVat * 0.15;
+  const monthlyInclVat = monthlyExclVat + monthlyVat;
+  const hasMonthly = monthlyExclVat > 0;
 
   const today = new Date();
   const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
   const remainingDays = daysInMonth - today.getDate() + 1;
   const proRataRatio = remainingDays / daysInMonth;
   const proRataExclVat = monthlyExclVat * proRataRatio;
-  const proRataInclVat = monthlyInclVat * proRataRatio;
+  const proRataVat = proRataExclVat * 0.15;
+  const proRataInclVat = proRataExclVat + proRataVat;
 
   const totalDueNowExclVat = dueNowExclVat + (hasMonthly ? proRataExclVat : 0);
-  const totalDueNowInclVat = dueNowInclVat + (hasMonthly ? proRataInclVat : 0);
-  const hasDueNow = totalDueNowInclVat > 0 || cart.some(c => c.itemType === "domain") || hasMonthly;
+  const totalDueNowVat = totalDueNowExclVat * 0.15;
+  const totalDueNowInclVat = totalDueNowExclVat + totalDueNowVat;
+  const hasDueNow = totalDueNowExclVat > 0 || cart.some(c => c.itemType === "domain") || hasMonthly;
 
   const cartQtyOf = (id: number, type: string) => cart.find(c => c.referenceId === id && c.itemType === type)?.quantity ?? 0;
   const isDidInCart = (id: number) => cart.some(c => c.referenceId === id && c.itemType === "did");
@@ -450,7 +456,8 @@ export default function ResellerNewOrder() {
                                 )}
                               </div>
                               {service.categoryName && <p className="text-xs text-muted-foreground">{service.categoryName}</p>}
-                              <p className="text-xs text-primary font-semibold mt-0.5">{formatZar(inclVat)} <span className="text-muted-foreground font-normal">/{service.unit} incl VAT</span></p>
+                              <p className="text-xs text-primary font-semibold mt-0.5">{formatZar(exclVat)} <span className="text-muted-foreground font-normal">/{service.unit} excl VAT</span></p>
+                              <p className="text-[10px] text-muted-foreground/70">{formatZar(inclVat)} incl VAT</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0 ml-3">
@@ -1046,16 +1053,16 @@ export default function ResellerNewOrder() {
                       <span className="text-xs text-muted-foreground/60">(first payment)</span>
                     </div>
                     <div className="px-3 py-2.5 space-y-1.5">
-                      {dueNowInclVat > 0 && (
+                      {dueNowExclVat > 0 && (
                         <div className="flex justify-between text-muted-foreground text-xs pb-1 border-b border-border/30">
-                          <span>Once-off items</span>
-                          <span className="font-medium text-foreground">{formatZar(dueNowInclVat)}</span>
+                          <span>Once-off items excl VAT</span>
+                          <span className="font-medium text-foreground">{formatZar(dueNowExclVat)}</span>
                         </div>
                       )}
                       {hasMonthly && (
                         <div className="flex justify-between text-muted-foreground text-xs pb-1 border-b border-border/30">
-                          <span>Pro-rata Month 1 <span className="text-muted-foreground/60">({remainingDays}/{daysInMonth} days)</span></span>
-                          <span className="font-medium text-foreground">{formatZar(proRataInclVat)}</span>
+                          <span>Pro-rata Month 1 excl VAT <span className="text-muted-foreground/60">({remainingDays}/{daysInMonth} days)</span></span>
+                          <span className="font-medium text-foreground">{formatZar(proRataExclVat)}</span>
                         </div>
                       )}
                       <div className="flex justify-between text-muted-foreground">
@@ -1064,10 +1071,10 @@ export default function ResellerNewOrder() {
                       </div>
                       <div className="flex justify-between text-muted-foreground">
                         <span>VAT (15%)</span>
-                        <span className="font-medium text-foreground">{formatZar(totalDueNowInclVat - totalDueNowExclVat)}</span>
+                        <span className="font-medium text-foreground">{formatZar(totalDueNowVat)}</span>
                       </div>
                       <div className="flex justify-between font-bold text-sm border-t border-border/40 pt-1.5">
-                        <span>Total Due Now</span>
+                        <span>Total Due Now incl VAT</span>
                         <span className="text-foreground">{formatZar(totalDueNowInclVat)}</span>
                       </div>
                     </div>
@@ -1087,10 +1094,10 @@ export default function ResellerNewOrder() {
                       </div>
                       <div className="flex justify-between text-muted-foreground">
                         <span>VAT (15%)</span>
-                        <span className="font-medium text-foreground">{formatZar(monthlyInclVat - monthlyExclVat)}</span>
+                        <span className="font-medium text-foreground">{formatZar(monthlyVat)}</span>
                       </div>
                       <div className="flex justify-between font-bold text-sm border-t border-primary/20 pt-1.5">
-                        <span>Total / Month</span>
+                        <span>Total / Month incl VAT</span>
                         <span className="text-primary">{formatZar(monthlyInclVat)}</span>
                       </div>
                     </div>
