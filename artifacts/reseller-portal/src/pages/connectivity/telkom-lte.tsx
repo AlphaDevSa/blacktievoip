@@ -10,17 +10,19 @@ function TelkomLteContent({ role }: { role: "admin" | "reseller" }) {
   <meta charset="UTF-8"/>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; overflow: hidden; background: transparent; }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #fff; }
+    #telkomcontainer { width: 100%; }
+    input#address-input { width: 100%; padding: 8px 12px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 6px; }
   </style>
 </head>
 <body>
-<script type="text/javascript">
+<script type="text/javascript" id="telkomscript">
 (function(){
   var ax = document.createElement('script');
   ax.id = 'mainscript';
   ax.type = 'text/javascript';
   ax.async = true;
-  ax.src = 'https://rcp.axxess.co.za/public/js/telkomLteJs.php?key=${apiKey ?? ""}&width=100%&height=540px';
+  ax.src = 'https://rcp.axxess.co.za/public/js/telkomLteJs.php?key=${apiKey ?? ""}&width=100%&height=490px';
   var s = document.getElementsByTagName('script')[0];
   s.parentNode.insertBefore(ax, s);
 })();
