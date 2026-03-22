@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Black Tie VoIP Reseller Portal"
+version = "1.0.0"
+id = "artifacts/reseller-portal"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+localPort = 5000
+name = "web"
+paths = ["/"]
+
+[services.development]
+run = "pnpm --filter @workspace/reseller-portal run dev"
+
+[services.env]
+PORT = "5000"
+BASE_PATH = "/"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/reseller-portal", "run", "build"]
+publicDir = "artifacts/reseller-portal/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"

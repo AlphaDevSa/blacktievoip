@@ -1,0 +1,13 @@
+packages:
+  "framer-motion": "For smooth page transitions, modal animations, and staggered list reveals"
+  "lucide-react": "For beautiful consistent iconography across the portal"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility function to efficiently merge Tailwind CSS classes in JS without style conflicts"
+
+images: []
+
+notes:
+  - "Using dark corporate theme with Black Tie VoIP blue (#4BA3E3) as primary accent"
+  - "Forms implemented with standard controlled React state for maximum reliability"
+  - "Modals use fixed Tailwind overlays with Framer Motion for premium feel"
+  - "API hooks imported directly from @workspace/api-client-react"

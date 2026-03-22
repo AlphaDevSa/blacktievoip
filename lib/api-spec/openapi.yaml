@@ -1,0 +1,3152 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.2.0
+  description: Black Tie VoIP Reseller Portal API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: auth
+  - name: admin
+  - name: resellers
+  - name: catalog
+  - name: dids
+  - name: Storage
+    description: Object storage upload and serving endpoints.
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/register:
+    post:
+      operationId: registerReseller
+      tags: [auth]
+      summary: Register a new reseller (public)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResellerRegisterRequest"
+      responses:
+        "200":
+          description: Registration submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentUser"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/resellers:
+    get:
+      operationId: adminGetResellers
+      tags: [admin]
+      summary: Get all resellers
+      responses:
+        "200":
+          description: List of resellers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reseller"
+    post:
+      operationId: adminCreateReseller
+      tags: [admin]
+      summary: Create reseller
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateResellerRequest"
+      responses:
+        "201":
+          description: Reseller created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reseller"
+
+  /admin/resellers/{id}:
+    get:
+      operationId: adminGetReseller
+      tags: [admin]
+      summary: Get reseller by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reseller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reseller"
+    put:
+      operationId: adminUpdateReseller
+      tags: [admin]
+      summary: Update reseller
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateResellerRequest"
+      responses:
+        "200":
+          description: Reseller updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reseller"
+    delete:
+      operationId: adminDeleteReseller
+      tags: [admin]
+      summary: Delete reseller
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/stats:
+    get:
+      operationId: adminGetStats
+      tags: [admin]
+      summary: Get admin dashboard stats
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+  /admin/clients:
+    get:
+      operationId: adminGetClients
+      tags: [admin]
+      summary: Get all clients
+      responses:
+        "200":
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Client"
+
+  # ── Service Catalog ─────────────────────────────────────────────────────────
+
+  /admin/service-categories:
+    get:
+      operationId: adminGetServiceCategories
+      tags: [catalog]
+      summary: Get all service categories
+      responses:
+        "200":
+          description: List of service categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+    post:
+      operationId: adminCreateServiceCategory
+      tags: [catalog]
+      summary: Create service category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+
+  /admin/service-categories/{id}:
+    put:
+      operationId: adminUpdateServiceCategory
+      tags: [catalog]
+      summary: Update service category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCategoryRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+    delete:
+      operationId: adminDeleteServiceCategory
+      tags: [catalog]
+      summary: Delete service category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/services:
+    get:
+      operationId: adminGetServices
+      tags: [catalog]
+      summary: Get all services
+      responses:
+        "200":
+          description: List of services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Service"
+    post:
+      operationId: adminCreateService
+      tags: [catalog]
+      summary: Create service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateServiceRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+
+  /admin/services/{id}:
+    put:
+      operationId: adminUpdateService
+      tags: [catalog]
+      summary: Update service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateServiceRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+    delete:
+      operationId: adminDeleteService
+      tags: [catalog]
+      summary: Delete service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # ── Product Catalog ──────────────────────────────────────────────────────────
+
+  /admin/product-categories:
+    get:
+      operationId: adminGetProductCategories
+      tags: [catalog]
+      summary: Get all product categories
+      responses:
+        "200":
+          description: List of product categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+    post:
+      operationId: adminCreateProductCategory
+      tags: [catalog]
+      summary: Create product category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+
+  /admin/product-categories/{id}:
+    put:
+      operationId: adminUpdateProductCategory
+      tags: [catalog]
+      summary: Update product category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCategoryRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+    delete:
+      operationId: adminDeleteProductCategory
+      tags: [catalog]
+      summary: Delete product category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/products:
+    get:
+      operationId: adminGetProducts
+      tags: [catalog]
+      summary: Get all products
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: adminCreateProduct
+      tags: [catalog]
+      summary: Create product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /admin/products/{id}:
+    put:
+      operationId: adminUpdateProduct
+      tags: [catalog]
+      summary: Update product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: adminDeleteProduct
+      tags: [catalog]
+      summary: Delete product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # ── Web Hosting Packages ─────────────────────────────────────────────────────
+
+  /admin/hosting-packages:
+    get:
+      operationId: adminGetHostingPackages
+      tags: [catalog]
+      summary: Get all hosting packages
+      responses:
+        "200":
+          description: List of hosting packages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HostingPackage"
+    post:
+      operationId: adminCreateHostingPackage
+      tags: [catalog]
+      summary: Create hosting package
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateHostingPackageRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HostingPackage"
+
+  /admin/hosting-packages/{id}:
+    put:
+      operationId: adminUpdateHostingPackage
+      tags: [catalog]
+      summary: Update hosting package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateHostingPackageRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HostingPackage"
+    delete:
+      operationId: adminDeleteHostingPackage
+      tags: [catalog]
+      summary: Delete hosting package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # ── Domain TLDs ───────────────────────────────────────────────────────────────
+
+  /admin/domain-tlds:
+    get:
+      operationId: adminGetDomainTlds
+      tags: [catalog]
+      summary: Get all domain TLDs
+      responses:
+        "200":
+          description: List of domain TLDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DomainTld"
+    post:
+      operationId: adminCreateDomainTld
+      tags: [catalog]
+      summary: Create domain TLD
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDomainTldRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainTld"
+
+  /admin/domain-tlds/{id}:
+    put:
+      operationId: adminUpdateDomainTld
+      tags: [catalog]
+      summary: Update domain TLD
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDomainTldRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainTld"
+    delete:
+      operationId: adminDeleteDomainTld
+      tags: [catalog]
+      summary: Delete domain TLD
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /catalog/domain-tlds:
+    get:
+      operationId: getCatalogDomainTlds
+      tags: [catalog]
+      summary: Get active domain TLDs (reseller view)
+      responses:
+        "200":
+          description: List of active domain TLDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DomainTld"
+
+  # ── Domain Check ──────────────────────────────────────────────────────────────
+
+  /reseller/check-domain:
+    get:
+      operationId: resellerCheckDomain
+      tags: [reseller]
+      summary: Check domain availability via RDAP
+      parameters:
+        - name: domain
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Domain availability result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainCheckResult"
+
+  # ── DID Manager ──────────────────────────────────────────────────────────────
+
+  /admin/area-codes:
+    get:
+      operationId: adminGetAreaCodes
+      tags: [dids]
+      summary: Get all area codes
+      responses:
+        "200":
+          description: List of area codes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AreaCode"
+    post:
+      operationId: adminCreateAreaCode
+      tags: [dids]
+      summary: Create area code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAreaCodeRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AreaCode"
+
+  /admin/area-codes/{id}:
+    put:
+      operationId: adminUpdateAreaCode
+      tags: [dids]
+      summary: Update area code
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAreaCodeRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AreaCode"
+    delete:
+      operationId: adminDeleteAreaCode
+      tags: [dids]
+      summary: Delete area code
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/dids:
+    get:
+      operationId: adminGetDids
+      tags: [dids]
+      summary: Get all DIDs with filters
+      parameters:
+        - name: areaCodeId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: resellerId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of DIDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Did"
+    post:
+      operationId: adminCreateDid
+      tags: [dids]
+      summary: Create DID number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDidRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Did"
+
+  /admin/dids/bulk:
+    post:
+      operationId: adminBulkCreateDids
+      tags: [dids]
+      summary: Bulk create DID numbers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkCreateDidsRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/dids/{id}:
+    put:
+      operationId: adminUpdateDid
+      tags: [dids]
+      summary: Update DID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDidRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Did"
+    delete:
+      operationId: adminDeleteDid
+      tags: [dids]
+      summary: Delete DID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/dids/{id}/assign:
+    post:
+      operationId: adminAssignDid
+      tags: [dids]
+      summary: Assign DID to reseller
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignDidRequest"
+      responses:
+        "200":
+          description: Assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Did"
+
+  /admin/dids/{id}/unassign:
+    post:
+      operationId: adminUnassignDid
+      tags: [dids]
+      summary: Unassign DID from reseller
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Unassigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Did"
+
+  # ── Reseller endpoints ────────────────────────────────────────────────────────
+
+  /reseller/clients:
+    get:
+      operationId: resellerGetClients
+      tags: [resellers]
+      summary: Get reseller's clients
+      responses:
+        "200":
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Client"
+    post:
+      operationId: resellerCreateClient
+      tags: [resellers]
+      summary: Create client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClientRequest"
+      responses:
+        "201":
+          description: Client created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+
+  /reseller/clients/{id}:
+    get:
+      operationId: resellerGetClient
+      tags: [resellers]
+      summary: Get client by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+    put:
+      operationId: resellerUpdateClient
+      tags: [resellers]
+      summary: Update client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateClientRequest"
+      responses:
+        "200":
+          description: Client updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+    delete:
+      operationId: resellerDeleteClient
+      tags: [resellers]
+      summary: Delete client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /reseller/stats:
+    get:
+      operationId: resellerGetStats
+      tags: [resellers]
+      summary: Get reseller dashboard stats
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResellerStats"
+
+  /reseller/profile:
+    get:
+      operationId: resellerGetProfile
+      tags: [resellers]
+      summary: Get reseller profile
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reseller"
+    put:
+      operationId: resellerUpdateProfile
+      tags: [resellers]
+      summary: Update reseller profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateResellerProfileRequest"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reseller"
+
+  /reseller/area-codes:
+    get:
+      operationId: resellerGetAreaCodes
+      tags: [dids]
+      summary: Get area codes with available DID counts
+      responses:
+        "200":
+          description: Area codes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AreaCodeWithCount"
+
+  /reseller/dids:
+    get:
+      operationId: resellerGetMyDids
+      tags: [dids]
+      summary: Get this reseller's assigned DIDs
+      responses:
+        "200":
+          description: DIDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Did"
+
+  /reseller/dids/available:
+    get:
+      operationId: resellerGetAvailableDids
+      tags: [dids]
+      summary: Get available DIDs for an area code
+      parameters:
+        - name: areaCodeId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Available DIDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Did"
+
+  /reseller/dids/{id}/request:
+    post:
+      operationId: resellerRequestDid
+      tags: [dids]
+      summary: Request/claim an available DID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: DID assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Did"
+
+  /catalog/services:
+    get:
+      operationId: getCatalogServices
+      tags: [catalog]
+      summary: Get active services (reseller view)
+      responses:
+        "200":
+          description: Services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Service"
+
+  /catalog/hosting-packages:
+    get:
+      operationId: getCatalogHostingPackages
+      tags: [catalog]
+      summary: Get active hosting packages (reseller view)
+      responses:
+        "200":
+          description: Hosting packages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HostingPackage"
+
+  /catalog/products:
+    get:
+      operationId: getCatalogProducts
+      tags: [catalog]
+      summary: Get active products (reseller view)
+      responses:
+        "200":
+          description: Products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /admin/dids/import-gsheets:
+    post:
+      operationId: adminImportDidsFromSheets
+      tags: [dids]
+      summary: Import DIDs from a public Google Sheet (dry-run or actual)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportSheetsRequest"
+      responses:
+        "200":
+          description: Import result or dry-run preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportSheetsResult"
+
+  /admin/orders:
+    get:
+      operationId: adminGetOrders
+      tags: [orders]
+      summary: List all orders (admin)
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Orders list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+
+  /admin/orders/{id}:
+    get:
+      operationId: adminGetOrder
+      tags: [orders]
+      summary: Get order detail with items (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetail"
+
+  /admin/orders/{id}/status:
+    put:
+      operationId: adminUpdateOrderStatus
+      tags: [orders]
+      summary: Update order status (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrderStatusRequest"
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /admin/staff:
+    get:
+      operationId: adminGetStaff
+      tags: [admin]
+      summary: List all staff members
+      responses:
+        "200":
+          description: Staff list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StaffMember"
+    post:
+      operationId: adminCreateStaff
+      tags: [admin]
+      summary: Create a staff member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStaffRequest"
+      responses:
+        "201":
+          description: Created staff member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffMember"
+
+  /admin/staff/{id}:
+    put:
+      operationId: adminUpdateStaff
+      tags: [admin]
+      summary: Update a staff member
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStaffRequest"
+      responses:
+        "200":
+          description: Updated staff member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffMember"
+    delete:
+      operationId: adminDeleteStaff
+      tags: [admin]
+      summary: Delete a staff member
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/staff/{id}/reset-password:
+    post:
+      operationId: adminResetStaffPassword
+      tags: [admin]
+      summary: Reset staff member password
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/company-settings:
+    get:
+      operationId: adminGetCompanySettings
+      tags: [admin]
+      summary: Get company settings
+      responses:
+        "200":
+          description: Company settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanySettings"
+    put:
+      operationId: adminUpdateCompanySettings
+      tags: [admin]
+      summary: Update company settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCompanySettingsRequest"
+      responses:
+        "200":
+          description: Updated company settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanySettings"
+
+  /orders:
+    get:
+      operationId: getMyOrders
+      tags: [orders]
+      summary: List reseller's own orders
+      responses:
+        "200":
+          description: My orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Place a new order (reseller)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderRequest"
+      responses:
+        "201":
+          description: Created order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetail"
+
+  /orders/{id}:
+    get:
+      operationId: getMyOrder
+      tags: [orders]
+      summary: Get reseller's own order detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderDetail"
+
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadUrlRequest'
+      responses:
+        '200':
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+        '400':
+          description: Missing or invalid required fields.
+        '500':
+          description: Failed to generate upload URL.
+
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serve an object entity
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Object content.
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Not found.
+
+  /catalog/new-items:
+    get:
+      operationId: getCatalogNewItems
+      tags: [catalog]
+      summary: Get new catalog items (last 30 days)
+      responses:
+        "200":
+          description: New catalog items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewCatalogItems"
+
+  /notices:
+    get:
+      operationId: getNotices
+      tags: [admin]
+      summary: Get active notices for resellers
+      responses:
+        "200":
+          description: List of active notices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notice"
+
+  /admin/notices:
+    get:
+      operationId: adminGetNotices
+      tags: [admin]
+      summary: Admin - list all notices
+      responses:
+        "200":
+          description: List of all notices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notice"
+    post:
+      operationId: adminCreateNotice
+      tags: [admin]
+      summary: Admin - create a notice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoticeRequest"
+      responses:
+        "201":
+          description: Created notice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notice"
+
+  /admin/notices/{id}:
+    put:
+      operationId: adminUpdateNotice
+      tags: [admin]
+      summary: Admin - update a notice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoticeRequest"
+      responses:
+        "200":
+          description: Updated notice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notice"
+    delete:
+      operationId: adminDeleteNotice
+      tags: [admin]
+      summary: Admin - delete a notice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/connectivity-categories:
+    get:
+      operationId: adminGetConnectivityCategories
+      tags: [catalog]
+      summary: Get all connectivity categories
+      responses:
+        "200":
+          description: List of connectivity categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+    post:
+      operationId: adminCreateConnectivityCategory
+      tags: [catalog]
+      summary: Create connectivity category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategoryRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+
+  /admin/connectivity-categories/{id}:
+    put:
+      operationId: adminUpdateConnectivityCategory
+      tags: [catalog]
+      summary: Update connectivity category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCategoryRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+    delete:
+      operationId: adminDeleteConnectivityCategory
+      tags: [catalog]
+      summary: Delete connectivity category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/connectivity-items:
+    get:
+      operationId: adminGetConnectivityItems
+      tags: [catalog]
+      summary: Get all connectivity items
+      responses:
+        "200":
+          description: List of connectivity items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConnectivityItem"
+    post:
+      operationId: adminCreateConnectivityItem
+      tags: [catalog]
+      summary: Create connectivity item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConnectivityItemRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectivityItem"
+
+  /admin/connectivity-items/{id}:
+    put:
+      operationId: adminUpdateConnectivityItem
+      tags: [catalog]
+      summary: Update connectivity item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConnectivityItemRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectivityItem"
+    delete:
+      operationId: adminDeleteConnectivityItem
+      tags: [catalog]
+      summary: Delete connectivity item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required: [success]
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [admin, reseller]
+      required: [email, password, role]
+
+    ResellerRegisterRequest:
+      type: object
+      properties:
+        companyName:
+          type: string
+        contactName:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        phone:
+          type: string
+      required: [companyName, contactName, email, password]
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        role:
+          type: string
+          enum: [admin, reseller]
+        user:
+          $ref: "#/components/schemas/CurrentUser"
+      required: [success, role, user]
+
+    CurrentUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, reseller]
+      required: [id, email, name, role]
+
+    Reseller:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyName:
+          type: string
+        contactName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        unitStreetNumber:
+          type: string
+        buildingComplex:
+          type: string
+        streetName:
+          type: string
+        address:
+          type: string
+        address2:
+          type: string
+        city:
+          type: string
+        province:
+          type: string
+        commissionRate:
+          type: number
+        status:
+          type: string
+          enum: [active, suspended, pending]
+        totalClients:
+          type: integer
+        monthlyRevenue:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, companyName, contactName, email, status, commissionRate, totalClients, monthlyRevenue, createdAt]
+
+    CreateResellerRequest:
+      type: object
+      properties:
+        companyName:
+          type: string
+        contactName:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        phone:
+          type: string
+        unitStreetNumber:
+          type: string
+        buildingComplex:
+          type: string
+        streetName:
+          type: string
+        address:
+          type: string
+        address2:
+          type: string
+        city:
+          type: string
+        province:
+          type: string
+        commissionRate:
+          type: number
+      required: [companyName, contactName, email, password]
+
+    UpdateResellerRequest:
+      type: object
+      properties:
+        companyName:
+          type: string
+        contactName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        unitStreetNumber:
+          type: string
+        buildingComplex:
+          type: string
+        streetName:
+          type: string
+        address:
+          type: string
+        address2:
+          type: string
+        city:
+          type: string
+        province:
+          type: string
+        commissionRate:
+          type: number
+        status:
+          type: string
+          enum: [active, suspended, pending]
+
+    UpdateResellerProfileRequest:
+      type: object
+      properties:
+        companyName:
+          type: string
+        contactName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        unitStreetNumber:
+          type: string
+        buildingComplex:
+          type: string
+        streetName:
+          type: string
+        address:
+          type: string
+        address2:
+          type: string
+        city:
+          type: string
+        province:
+          type: string
+
+    Client:
+      type: object
+      properties:
+        id:
+          type: integer
+        resellerId:
+          type: integer
+        resellerName:
+          type: string
+        companyName:
+          type: string
+        contactName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        unitStreetNumber:
+          type: string
+        buildingComplex:
+          type: string
+        streetName:
+          type: string
+        address:
+          type: string
+        address2:
+          type: string
+        city:
+          type: string
+        province:
+          type: string
+        sipExtensions:
+          type: integer
+        monthlyFee:
+          type: number
+        status:
+          type: string
+          enum: [active, suspended, cancelled]
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, resellerId, companyName, contactName, email, status, sipExtensions, monthlyFee, createdAt]
+
+    CreateClientRequest:
+      type: object
+      properties:
+        companyName:
+          type: string
+        contactName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        unitStreetNumber:
+          type: string
+        buildingComplex:
+          type: string
+        streetName:
+          type: string
+        address:
+          type: string
+        address2:
+          type: string
+        city:
+          type: string
+        province:
+          type: string
+        sipExtensions:
+          type: integer
+        monthlyFee:
+          type: number
+        notes:
+          type: string
+      required: [companyName, contactName, email, sipExtensions, monthlyFee]
+
+    UpdateClientRequest:
+      type: object
+      properties:
+        companyName:
+          type: string
+        contactName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        unitStreetNumber:
+          type: string
+        buildingComplex:
+          type: string
+        streetName:
+          type: string
+        address:
+          type: string
+        address2:
+          type: string
+        city:
+          type: string
+        province:
+          type: string
+        sipExtensions:
+          type: integer
+        monthlyFee:
+          type: number
+        status:
+          type: string
+          enum: [active, suspended, cancelled]
+        notes:
+          type: string
+
+    AdminStats:
+      type: object
+      properties:
+        totalResellers:
+          type: integer
+        activeResellers:
+          type: integer
+        totalClients:
+          type: integer
+        activeClients:
+          type: integer
+        totalMonthlyRevenue:
+          type: number
+        totalCommissionsPaid:
+          type: number
+      required: [totalResellers, activeResellers, totalClients, activeClients, totalMonthlyRevenue, totalCommissionsPaid]
+
+    ResellerStats:
+      type: object
+      properties:
+        totalClients:
+          type: integer
+        activeClients:
+          type: integer
+        monthlyRevenue:
+          type: number
+        commissionEarned:
+          type: number
+        totalSipExtensions:
+          type: integer
+        assignedDids:
+          type: integer
+      required: [totalClients, activeClients, monthlyRevenue, commissionEarned, totalSipExtensions, assignedDids]
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        parentId:
+          type: integer
+        parentName:
+          type: string
+        sortOrder:
+          type: integer
+        itemCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, sortOrder, itemCount, createdAt]
+
+    CreateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        parentId:
+          type: integer
+        sortOrder:
+          type: integer
+      required: [name]
+
+    UpdateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        parentId:
+          type: integer
+        sortOrder:
+          type: integer
+
+    Service:
+      type: object
+      properties:
+        id:
+          type: integer
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        retailPriceExclVat:
+          type: number
+          description: Retail price excluding VAT (ZAR)
+        resellerPriceExclVat:
+          type: number
+          description: Reseller price excluding VAT (ZAR)
+        resellerPriceInclVat:
+          type: number
+          description: Reseller price including VAT at 15% (ZAR)
+        priceInclVat:
+          type: number
+          description: Price including VAT at 15% (ZAR)
+        unit:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive]
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, price, unit, status, sortOrder, createdAt]
+
+    CreateServiceRequest:
+      type: object
+      properties:
+        categoryId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        retailPriceExclVat:
+          type: number
+        resellerPriceExclVat:
+          type: number
+        resellerPriceInclVat:
+          type: number
+        priceInclVat:
+          type: number
+        unit:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive]
+        sortOrder:
+          type: integer
+      required: [name]
+
+    UpdateServiceRequest:
+      type: object
+      properties:
+        categoryId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        retailPriceExclVat:
+          type: number
+        resellerPriceExclVat:
+          type: number
+        resellerPriceInclVat:
+          type: number
+        priceInclVat:
+          type: number
+        unit:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive]
+        sortOrder:
+          type: integer
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        sku:
+          type: string
+        imageUrl:
+          type: string
+        price:
+          type: number
+        retailPriceExclVat:
+          type: number
+        resellerPriceExclVat:
+          type: number
+        resellerPriceInclVat:
+          type: number
+        priceInclVat:
+          type: number
+        stockCount:
+          type: integer
+        status:
+          type: string
+          enum: [active, inactive]
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, price, stockCount, status, sortOrder, createdAt]
+
+    CreateProductRequest:
+      type: object
+      properties:
+        categoryId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        sku:
+          type: string
+        imageUrl:
+          type: string
+        price:
+          type: number
+        retailPriceExclVat:
+          type: number
+        resellerPriceExclVat:
+          type: number
+        resellerPriceInclVat:
+          type: number
+        priceInclVat:
+          type: number
+        stockCount:
+          type: integer
+        status:
+          type: string
+          enum: [active, inactive]
+        sortOrder:
+          type: integer
+      required: [name]
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        categoryId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        sku:
+          type: string
+        imageUrl:
+          type: string
+        price:
+          type: number
+        retailPriceExclVat:
+          type: number
+        resellerPriceExclVat:
+          type: number
+        resellerPriceInclVat:
+          type: number
+        priceInclVat:
+          type: number
+        stockCount:
+          type: integer
+        status:
+          type: string
+          enum: [active, inactive]
+        sortOrder:
+          type: integer
+
+    AreaCode:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        region:
+          type: string
+        province:
+          type: string
+        totalDids:
+          type: integer
+        availableDids:
+          type: integer
+        assignedDids:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, code, region, province, totalDids, availableDids, assignedDids, createdAt]
+
+    AreaCodeWithCount:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        region:
+          type: string
+        province:
+          type: string
+        availableCount:
+          type: integer
+      required: [id, code, region, province, availableCount]
+
+    CreateAreaCodeRequest:
+      type: object
+      properties:
+        code:
+          type: string
+        region:
+          type: string
+        province:
+          type: string
+      required: [code, region, province]
+
+    UpdateAreaCodeRequest:
+      type: object
+      properties:
+        code:
+          type: string
+        region:
+          type: string
+        province:
+          type: string
+
+    Did:
+      type: object
+      properties:
+        id:
+          type: integer
+        areaCodeId:
+          type: integer
+        areaCode:
+          type: string
+        region:
+          type: string
+        number:
+          type: string
+        status:
+          type: string
+          enum: [available, assigned, reserved]
+        resellerId:
+          type: integer
+        resellerName:
+          type: string
+        assignedAt:
+          type: string
+          format: date-time
+        reservedByOrderId:
+          type: integer
+          nullable: true
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, areaCodeId, number, status, createdAt]
+
+    CreateDidRequest:
+      type: object
+      properties:
+        areaCodeId:
+          type: integer
+        number:
+          type: string
+        notes:
+          type: string
+      required: [areaCodeId, number]
+
+    BulkCreateDidsRequest:
+      type: object
+      properties:
+        areaCodeId:
+          type: integer
+        numbers:
+          type: array
+          items:
+            type: string
+      required: [areaCodeId, numbers]
+
+    UpdateDidRequest:
+      type: object
+      properties:
+        notes:
+          type: string
+        status:
+          type: string
+          enum: [available, assigned, reserved]
+
+    AssignDidRequest:
+      type: object
+      properties:
+        resellerId:
+          type: integer
+      required: [resellerId]
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        resellerId:
+          type: integer
+        resellerName:
+          type: string
+        resellerEmail:
+          type: string
+        status:
+          type: string
+          enum: [pending, processing, completed, cancelled]
+        notes:
+          type: string
+        adminNotes:
+          type: string
+        totalExclVat:
+          type: number
+        totalInclVat:
+          type: number
+        itemCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, resellerId, status, totalExclVat, totalInclVat, createdAt, updatedAt]
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        itemType:
+          type: string
+        referenceId:
+          type: integer
+        name:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+        unitPriceExclVat:
+          type: number
+        unitPriceInclVat:
+          type: number
+        lineTotal:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, orderId, itemType, name, quantity, unitPriceExclVat, unitPriceInclVat, lineTotal, createdAt]
+
+    OrderDetail:
+      allOf:
+        - $ref: "#/components/schemas/Order"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/OrderItem"
+          required: [items]
+
+    CreateOrderItemRequest:
+      type: object
+      properties:
+        itemType:
+          type: string
+        referenceId:
+          type: integer
+        name:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+        unitPriceExclVat:
+          type: number
+        unitPriceInclVat:
+          type: number
+      required: [name, unitPriceExclVat]
+
+    CreateOrderRequest:
+      type: object
+      properties:
+        notes:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateOrderItemRequest"
+      required: [items]
+
+    ImportSheetsRequest:
+      type: object
+      properties:
+        url:
+          type: string
+        dryRun:
+          type: boolean
+      required: [url]
+
+    ImportSheetsSampleRow:
+      type: object
+      properties:
+        areaCode:
+          type: string
+        number:
+          type: string
+        region:
+          type: string
+        province:
+          type: string
+        notes:
+          type: string
+
+    ImportSheetsResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        totalRows:
+          type: integer
+        created:
+          type: integer
+        skipped:
+          type: integer
+        areaCodesCreated:
+          type: integer
+        sample:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportSheetsSampleRow"
+        headers:
+          type: array
+          items:
+            type: string
+      required: [ok, totalRows]
+
+    UpdateOrderStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, processing, completed, cancelled]
+        adminNotes:
+          type: string
+      required: [status]
+
+    StaffMember:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [superadmin, staff]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, email, role, isActive, createdAt]
+
+    CreateStaffRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [superadmin, staff]
+      required: [name, email, password]
+
+    UpdateStaffRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [superadmin, staff]
+        isActive:
+          type: boolean
+
+    ResetPasswordRequest:
+      type: object
+      properties:
+        password:
+          type: string
+      required: [password]
+
+    CompanySettings:
+      type: object
+      properties:
+        id:
+          type: integer
+        companyName:
+          type: string
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        unitStreetNumber:
+          type: string
+          nullable: true
+        buildingComplex:
+          type: string
+          nullable: true
+        streetName:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        address2:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        province:
+          type: string
+          nullable: true
+        postalCode:
+          type: string
+          nullable: true
+        country:
+          type: string
+        vatNumber:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        logoUrl:
+          type: string
+          nullable: true
+        primaryColor:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, companyName, country, primaryColor, updatedAt]
+
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/UploadUrlRequest'
+
+    UpdateCompanySettingsRequest:
+      type: object
+      properties:
+        companyName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        unitStreetNumber:
+          type: string
+        buildingComplex:
+          type: string
+        streetName:
+          type: string
+        address:
+          type: string
+        address2:
+          type: string
+        city:
+          type: string
+        province:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+        vatNumber:
+          type: string
+        website:
+          type: string
+        logoUrl:
+          type: string
+        primaryColor:
+          type: string
+
+    HostingPackage:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        diskSpaceGb:
+          type: integer
+        bandwidthGb:
+          type: integer
+        emailAccounts:
+          type: integer
+        databases:
+          type: integer
+        subdomains:
+          type: integer
+        sslIncluded:
+          type: boolean
+        retailPriceExclVat:
+          type: number
+        resellerPriceExclVat:
+          type: number
+        resellerPriceInclVat:
+          type: number
+        priceInclVat:
+          type: number
+        status:
+          type: string
+          enum: [active, inactive]
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, diskSpaceGb, bandwidthGb, emailAccounts, databases, subdomains, sslIncluded, status, sortOrder, createdAt]
+
+    CreateHostingPackageRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        diskSpaceGb:
+          type: integer
+        bandwidthGb:
+          type: integer
+        emailAccounts:
+          type: integer
+        databases:
+          type: integer
+        subdomains:
+          type: integer
+        sslIncluded:
+          type: boolean
+        retailPriceExclVat:
+          type: number
+        resellerPriceExclVat:
+          type: number
+        resellerPriceInclVat:
+          type: number
+        priceInclVat:
+          type: number
+        status:
+          type: string
+          enum: [active, inactive]
+        sortOrder:
+          type: integer
+      required: [name]
+
+    DomainTld:
+      type: object
+      properties:
+        id:
+          type: integer
+        tld:
+          type: string
+        description:
+          type: string
+          nullable: true
+        registrationYears:
+          type: integer
+        retailPriceExclVat:
+          type: number
+          nullable: true
+        priceInclVat:
+          type: number
+          nullable: true
+        resellerPriceExclVat:
+          type: number
+          nullable: true
+        resellerPriceInclVat:
+          type: number
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive]
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+      required: [id, tld, registrationYears, status, sortOrder, createdAt]
+
+    CreateDomainTldRequest:
+      type: object
+      properties:
+        tld:
+          type: string
+        description:
+          type: string
+        registrationYears:
+          type: integer
+        retailPriceExclVat:
+          type: number
+        priceInclVat:
+          type: number
+        resellerPriceExclVat:
+          type: number
+        resellerPriceInclVat:
+          type: number
+        status:
+          type: string
+          enum: [active, inactive]
+        sortOrder:
+          type: integer
+      required: [tld]
+
+    Notice:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        type:
+          type: string
+          enum: [info, warning, success, danger]
+        priority:
+          type: integer
+        isActive:
+          type: boolean
+        expiresAt:
+          type: string
+          nullable: true
+        createdByAdminId:
+          type: integer
+          nullable: true
+        createdByName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, title, content, type, priority, isActive, createdAt, updatedAt]
+
+    CreateNoticeRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        type:
+          type: string
+          enum: [info, warning, success, danger]
+        priority:
+          type: integer
+        isActive:
+          type: boolean
+        expiresAt:
+          type: string
+          nullable: true
+      required: [title, content]
+
+    NewCatalogItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [service, product, hosting, domain]
+        createdAt:
+          type: string
+      required: [id, name, type, createdAt]
+
+    NewCatalogItems:
+      type: object
+      properties:
+        recentItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/NewCatalogItem"
+        totalServices:
+          type: integer
+        totalProducts:
+          type: integer
+        totalHosting:
+          type: integer
+        totalDomains:
+          type: integer
+      required: [recentItems, totalServices, totalProducts, totalHosting, totalDomains]
+
+    ConnectivityItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        categoryId:
+          type: integer
+          nullable: true
+        categoryName:
+          type: string
+          nullable: true
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        speed:
+          type: string
+          nullable: true
+        provider:
+          type: string
+          nullable: true
+        contention:
+          type: string
+          nullable: true
+        contractMonths:
+          type: integer
+          nullable: true
+        setupFeeExclVat:
+          type: number
+          nullable: true
+        retailPriceExclVat:
+          type: number
+          nullable: true
+        retailPriceInclVat:
+          type: number
+          nullable: true
+        resellerPriceExclVat:
+          type: number
+          nullable: true
+        resellerPriceInclVat:
+          type: number
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive]
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+      required: [id, name, status, sortOrder, createdAt]
+
+    CreateConnectivityItemRequest:
+      type: object
+      properties:
+        categoryId:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        speed:
+          type: string
+          nullable: true
+        provider:
+          type: string
+          nullable: true
+        contention:
+          type: string
+          nullable: true
+        contractMonths:
+          type: integer
+          nullable: true
+        setupFeeExclVat:
+          type: number
+          nullable: true
+        retailPriceExclVat:
+          type: number
+          nullable: true
+        retailPriceInclVat:
+          type: number
+          nullable: true
+        resellerPriceExclVat:
+          type: number
+          nullable: true
+        resellerPriceInclVat:
+          type: number
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive]
+        sortOrder:
+          type: integer
+      required: [name]
+
+    DomainCheckResult:
+      type: object
+      properties:
+        domain:
+          type: string
+        available:
+          type: boolean
+        status:
+          type: string
+        registrar:
+          type: string
+        expiresAt:
+          type: string
+        registrationStatus:
+          type: string
+      required: [domain, available, status]
