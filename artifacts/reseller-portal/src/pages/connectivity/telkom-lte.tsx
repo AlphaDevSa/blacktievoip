@@ -4,31 +4,9 @@ import { SignalHigh, AlertTriangle } from "lucide-react";
 function TelkomLteContent({ role }: { role: "admin" | "reseller" }) {
   const apiKey = import.meta.env.VITE_AXXESS_API_KEY as string | undefined;
 
-  const srcdoc = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8"/>
-  <style>
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #fff; }
-    #telkomcontainer { width: 100%; }
-    input#address-input { width: 100%; padding: 8px 12px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 6px; }
-  </style>
-</head>
-<body>
-<script type="text/javascript" id="telkomscript">
-(function(){
-  var ax = document.createElement('script');
-  ax.id = 'mainscript';
-  ax.type = 'text/javascript';
-  ax.async = true;
-  ax.src = 'https://rcp.axxess.co.za/public/js/telkomLteJs.php?key=${apiKey ?? ""}&width=100%&height=490px';
-  var s = document.getElementsByTagName('script')[0];
-  s.parentNode.insertBefore(ax, s);
-})();
-<\/script>
-</body>
-</html>`;
+  const mapSrc = apiKey
+    ? `${import.meta.env.BASE_URL}telkom-map.html?key=${encodeURIComponent(apiKey)}`
+    : null;
 
   return (
     <AppLayout role={role} title="Telkom LTE Coverage Check">
@@ -46,7 +24,7 @@ function TelkomLteContent({ role }: { role: "admin" | "reseller" }) {
             </div>
           </div>
 
-          {!apiKey ? (
+          {!mapSrc ? (
             <div className="p-10 flex flex-col items-center justify-center gap-3 text-center">
               <AlertTriangle className="w-8 h-8 text-amber-500" />
               <p className="font-semibold text-foreground">Axxess API key not configured</p>
@@ -57,11 +35,12 @@ function TelkomLteContent({ role }: { role: "admin" | "reseller" }) {
           ) : (
             <div className="p-4">
               <iframe
-                srcDoc={srcdoc}
+                src={mapSrc}
                 className="w-full border-0 rounded-xl"
                 style={{ height: "560px" }}
                 title="Telkom LTE Coverage Map"
                 allow="geolocation"
+                referrerPolicy="origin"
               />
             </div>
           )}
