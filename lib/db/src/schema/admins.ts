@@ -50,6 +50,9 @@ export const companySettingsTable = pgTable("company_settings", {
   bankBranchCode: text("bank_branch_code"),
   bankSwiftCode: text("bank_swift_code"),
   bankReference: text("bank_reference"),
+  // DID Pricing (reseller rate)
+  didResellerPriceExclVat: text("did_reseller_price_excl_vat"),
+  didResellerPriceInclVat: text("did_reseller_price_incl_vat"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

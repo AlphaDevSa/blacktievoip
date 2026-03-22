@@ -53,6 +53,8 @@ export default function AdminCompanySettings() {
     bankBranchCode: "",
     bankSwiftCode: "",
     bankReference: "",
+    didResellerPriceExclVat: "",
+    didResellerPriceInclVat: "",
   });
 
   const [isDirty, setIsDirty] = useState(false);
@@ -92,6 +94,8 @@ export default function AdminCompanySettings() {
         bankBranchCode: s.bankBranchCode ?? "",
         bankSwiftCode: s.bankSwiftCode ?? "",
         bankReference: s.bankReference ?? "",
+        didResellerPriceExclVat: s.didResellerPriceExclVat != null ? String(s.didResellerPriceExclVat) : "",
+        didResellerPriceInclVat: s.didResellerPriceInclVat != null ? String(s.didResellerPriceInclVat) : "",
       });
       setIsDirty(false);
     }
@@ -165,6 +169,8 @@ export default function AdminCompanySettings() {
       bankBranchCode: s.bankBranchCode ?? "",
       bankSwiftCode: s.bankSwiftCode ?? "",
       bankReference: s.bankReference ?? "",
+      didResellerPriceExclVat: s.didResellerPriceExclVat != null ? String(s.didResellerPriceExclVat) : "",
+      didResellerPriceInclVat: s.didResellerPriceInclVat != null ? String(s.didResellerPriceInclVat) : "",
     });
     setIsDirty(false);
   };
@@ -514,6 +520,59 @@ export default function AdminCompanySettings() {
             <div>
               <label className={labelCls}>Payment Reference <span className="text-xs font-normal">(optional — e.g. invoice number placeholder)</span></label>
               <input value={form.bankReference} onChange={e => set("bankReference", e.target.value)} className={inputCls} placeholder="e.g. Invoice No." />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* DID Reseller Pricing */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center gap-3 p-5 border-b border-border bg-primary/5">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Phone className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-foreground">DID Number Pricing</h2>
+              <p className="text-xs text-muted-foreground">Monthly reseller rate shown to resellers when ordering DID numbers</p>
+            </div>
+          </div>
+          <div className="p-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Monthly Price — Excl VAT (R)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.didResellerPriceExclVat}
+                  onChange={e => {
+                    const excl = parseFloat(e.target.value);
+                    set("didResellerPriceExclVat", e.target.value);
+                    if (!isNaN(excl) && form.didResellerPriceInclVat === "") {
+                      set("didResellerPriceInclVat", (excl * 1.15).toFixed(2));
+                    }
+                  }}
+                  className={inputCls}
+                  placeholder="e.g. 60.00"
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Monthly Price — Incl VAT (R) <span className="text-xs font-normal text-muted-foreground">(auto ↔)</span></label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.didResellerPriceInclVat}
+                  onChange={e => {
+                    const incl = parseFloat(e.target.value);
+                    set("didResellerPriceInclVat", e.target.value);
+                    if (!isNaN(incl)) {
+                      set("didResellerPriceExclVat", (incl / 1.15).toFixed(2));
+                    }
+                  }}
+                  className={inputCls}
+                  placeholder="e.g. 69.00"
+                />
+              </div>
             </div>
           </div>
         </motion.div>

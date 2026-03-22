@@ -122,6 +122,16 @@ export default function ResellerNewOrder() {
   const { data: hostingPackages = [] } = useGetCatalogHostingPackages();
   const { data: domainTlds = [] } = useGetCatalogDomainTlds();
   const { data: areaCodes = [] } = useResellerGetAreaCodes();
+  const { data: didPricing } = useQuery({
+    queryKey: ["reseller-did-pricing"],
+    queryFn: async () => {
+      const res = await fetch("/api/reseller/did-pricing", { credentials: "include" });
+      if (!res.ok) return { exclVat: null, inclVat: null };
+      return res.json() as Promise<{ exclVat: number | null; inclVat: number | null }>;
+    },
+  });
+  const didPriceExcl = didPricing?.exclVat ?? 60;
+  const didPriceIncl = didPricing?.inclVat ?? (didPriceExcl * 1.15);
   const createOrder = useCreateOrder();
 
   // Helper: identify services that need a DID (VoIP line / PBX extension)
@@ -638,7 +648,7 @@ export default function ResellerNewOrder() {
                                         if (!voipSelectedDidId || !voipBundleServiceId) return;
                                         const did = (voipAvailableDids as Did[]).find((d: Did) => d.id === voipSelectedDidId);
                                         const bundle = bundleServices.find(s => s.id === voipBundleServiceId);
-                                        if (did) addToCart({ referenceId: did.id, itemType: "did", name: `DID ${did.number}`, unitPriceExclVat: 60, unitPriceInclVat: 69, quantity: 1 });
+                                        if (did) addToCart({ referenceId: did.id, itemType: "did", name: `DID ${did.number}`, unitPriceExclVat: didPriceExcl, unitPriceInclVat: didPriceIncl, quantity: 1 });
                                         if (bundle) {
                                           const { exclVat: bExcl, inclVat: bIncl } = vatPrices(bundle as any);
                                           addToCart({ referenceId: bundle.id, itemType: "service", name: bundle.name, unitPriceExclVat: bExcl, unitPriceInclVat: bIncl, quantity: 1 });
@@ -747,7 +757,7 @@ export default function ResellerNewOrder() {
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                               <div className="text-right mr-1">
-                                <p className="text-xs font-semibold text-primary">R 69.00</p>
+                                <p className="text-xs font-semibold text-primary">{formatZar(didPriceIncl)}</p>
                                 <p className="text-xs text-muted-foreground">/month incl VAT</p>
                               </div>
                               {inCart ? (
@@ -755,7 +765,7 @@ export default function ResellerNewOrder() {
                                   <Trash2 className="w-3.5 h-3.5" /> Remove
                                 </button>
                               ) : (
-                                <button onClick={() => addToCart({ referenceId: did.id, itemType: "did", name: `DID ${did.number}`, unitPriceExclVat: 60, unitPriceInclVat: 69, quantity: 1 })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors">
+                                <button onClick={() => addToCart({ referenceId: did.id, itemType: "did", name: `DID ${did.number}`, unitPriceExclVat: didPriceExcl, unitPriceInclVat: didPriceIncl, quantity: 1 })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors">
                                   <Plus className="w-3.5 h-3.5" /> Add to Order
                                 </button>
                               )}

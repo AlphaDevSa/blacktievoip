@@ -154,6 +154,7 @@ router.put("/company-settings", async (req, res) => {
       smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, smtpSecure,
       bankName, bankAccountHolder, bankAccountNumber, bankAccountType,
       bankBranchCode, bankSwiftCode, bankReference,
+      didResellerPriceExclVat, didResellerPriceInclVat,
     } = req.body;
 
     const update: any = { updatedAt: new Date() };
@@ -186,6 +187,8 @@ router.put("/company-settings", async (req, res) => {
     if (bankBranchCode !== undefined) update.bankBranchCode = bankBranchCode || null;
     if (bankSwiftCode !== undefined) update.bankSwiftCode = bankSwiftCode || null;
     if (bankReference !== undefined) update.bankReference = bankReference || null;
+    if (didResellerPriceExclVat !== undefined) update.didResellerPriceExclVat = didResellerPriceExclVat != null && didResellerPriceExclVat !== "" ? String(didResellerPriceExclVat) : null;
+    if (didResellerPriceInclVat !== undefined) update.didResellerPriceInclVat = didResellerPriceInclVat != null && didResellerPriceInclVat !== "" ? String(didResellerPriceInclVat) : null;
 
     const [updated] = await db
       .update(companySettingsTable)

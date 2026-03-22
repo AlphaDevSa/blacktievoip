@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { db } from "@workspace/db";
-import { resellersTable, clientsTable, didsTable } from "@workspace/db";
+import { resellersTable, clientsTable, didsTable, companySettingsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { promises as dnsPromises } from "dns";
 
@@ -348,6 +348,25 @@ router.delete("/clients/:id", async (req, res) => {
     return res.json({ success: true, message: "Client deleted" });
   } catch (err) {
     console.error("Delete client error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── DID Pricing ───────────────────────────────────────────────────────────────
+
+router.get("/did-pricing", async (_req, res) => {
+  try {
+    const rows = await db.select({
+      didResellerPriceExclVat: companySettingsTable.didResellerPriceExclVat,
+      didResellerPriceInclVat: companySettingsTable.didResellerPriceInclVat,
+    }).from(companySettingsTable).limit(1);
+    const row = rows[0] ?? {};
+    return res.json({
+      exclVat: row.didResellerPriceExclVat != null ? Number(row.didResellerPriceExclVat) : null,
+      inclVat: row.didResellerPriceInclVat != null ? Number(row.didResellerPriceInclVat) : null,
+    });
+  } catch (err) {
+    console.error("DID pricing error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
