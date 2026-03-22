@@ -41,6 +41,9 @@ router.post("/login", async (req, res) => {
       if (reseller.status === "pending") {
         return res.status(403).json({ error: "Your application is pending admin approval. You will be notified once approved." });
       }
+      if (reseller.status === "info_requested") {
+        return res.status(403).json({ error: "Additional information has been requested for your application. Please check your email and reply with the requested details." });
+      }
       if (reseller.status === "rejected") {
         return res.status(403).json({ error: "Your application was not approved. Please contact us for more information." });
       }

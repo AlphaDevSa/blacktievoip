@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import {
   Building2, User, Mail, Phone, Calendar, CheckCircle2,
   XCircle, ClipboardList, AlertCircle, Search, Inbox,
+  Eye, MessageSquare,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -44,19 +45,37 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// ── Status badge ──────────────────────────────────────────────────────────────
+
+function StatusBadge({ status }: { status: string }) {
+  if (status === "pending") {
+    return <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">Pending Review</Badge>;
+  }
+  if (status === "info_requested") {
+    return <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">Info Requested</Badge>;
+  }
+  if (status === "rejected") {
+    return <Badge variant="destructive" className="text-xs">Rejected</Badge>;
+  }
+  return null;
+}
+
 // ── Application card ──────────────────────────────────────────────────────────
 
 function ApplicationCard({
   app,
+  onView,
   onApprove,
   onReject,
+  onRequestInfo,
 }: {
   app: Application;
+  onView: (app: Application) => void;
   onApprove?: (app: Application) => void;
   onReject?: (app: Application) => void;
+  onRequestInfo?: (app: Application) => void;
 }) {
-  const isPending = app.status === "pending";
-  const isRejected = app.status === "rejected";
+  const isActionable = app.status === "pending" || app.status === "info_requested";
 
   return (
     <Card className="border border-border shadow-sm hover:shadow-md transition-shadow">
@@ -70,16 +89,7 @@ function ApplicationCard({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-semibold text-base truncate">{app.companyName}</h3>
-                {isPending && (
-                  <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">
-                    Pending Review
-                  </Badge>
-                )}
-                {isRejected && (
-                  <Badge variant="destructive" className="text-xs">
-                    Rejected
-                  </Badge>
-                )}
+                <StatusBadge status={app.status} />
               </div>
 
               <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-y-1 gap-x-6 text-sm text-muted-foreground">
@@ -108,30 +118,236 @@ function ApplicationCard({
           </div>
 
           {/* Actions */}
-          {isPending && onApprove && onReject && (
-            <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onView(app)}
+              className="gap-1.5"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              View
+            </Button>
+            {isActionable && onRequestInfo && (
               <Button
                 size="sm"
                 variant="outline"
-                className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
-                onClick={() => onReject(app)}
+                className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 gap-1.5"
+                onClick={() => onRequestInfo(app)}
               >
-                <XCircle className="w-4 h-4 mr-1" />
-                Reject
+                <MessageSquare className="w-3.5 h-3.5" />
+                Request Info
               </Button>
+            )}
+            {isActionable && onReject && (
               <Button
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                variant="outline"
+                className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 gap-1.5"
+                onClick={() => onReject(app)}
+              >
+                <XCircle className="w-3.5 h-3.5" />
+                Reject
+              </Button>
+            )}
+            {isActionable && onApprove && (
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm gap-1.5"
                 onClick={() => onApprove(app)}
               >
-                <CheckCircle2 className="w-4 h-4 mr-1" />
+                <CheckCircle2 className="w-3.5 h-3.5" />
                 Approve
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// ── View Dialog ───────────────────────────────────────────────────────────────
+
+function ViewDialog({
+  app,
+  open,
+  onClose,
+  onApprove,
+  onReject,
+  onRequestInfo,
+}: {
+  app: Application | null;
+  open: boolean;
+  onClose: () => void;
+  onApprove: (app: Application) => void;
+  onReject: (app: Application) => void;
+  onRequestInfo: (app: Application) => void;
+}) {
+  if (!app) return null;
+  const isActionable = app.status === "pending" || app.status === "info_requested";
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-primary" />
+            Application Details
+          </DialogTitle>
+          <DialogDescription>
+            Full details for <strong>{app.companyName}</strong>
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-1">
+          <div className="bg-muted/50 rounded-xl p-4 space-y-2.5 text-sm">
+            <div className="flex items-center gap-2">
+              <StatusBadge status={app.status} />
+            </div>
+            <div className="grid grid-cols-[120px_1fr] gap-y-2 pt-1">
+              <span className="text-muted-foreground font-medium">Company</span>
+              <span className="font-semibold">{app.companyName}</span>
+              <span className="text-muted-foreground font-medium">Contact</span>
+              <span>{app.contactName}</span>
+              <span className="text-muted-foreground font-medium">Email</span>
+              <a href={`mailto:${app.email}`} className="text-primary hover:underline break-all">{app.email}</a>
+              <span className="text-muted-foreground font-medium">Phone</span>
+              <span>{app.phone || <span className="text-muted-foreground italic">Not provided</span>}</span>
+              <span className="text-muted-foreground font-medium">Applied</span>
+              <span>{format(new Date(app.createdAt), "dd MMM yyyy 'at' HH:mm")}</span>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="flex-wrap gap-2">
+          <Button variant="outline" onClick={onClose}>Close</Button>
+          {isActionable && (
+            <>
+              <Button
+                variant="outline"
+                className="border-blue-200 text-blue-600 hover:bg-blue-50 gap-1.5"
+                onClick={() => { onClose(); onRequestInfo(app); }}
+              >
+                <MessageSquare className="w-4 h-4" />
+                Request Info
+              </Button>
+              <Button
+                variant="outline"
+                className="border-red-200 text-red-600 hover:bg-red-50 gap-1.5"
+                onClick={() => { onClose(); onReject(app); }}
+              >
+                <XCircle className="w-4 h-4" />
+                Reject
+              </Button>
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                onClick={() => { onClose(); onApprove(app); }}
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Approve
+              </Button>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Request Info Dialog ───────────────────────────────────────────────────────
+
+function RequestInfoDialog({
+  app,
+  open,
+  onClose,
+}: {
+  app: Application | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [message, setMessage] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: ({ id, message }: { id: number; message: string }) =>
+      apiFetch(`/api/admin/resellers/${id}/request-info`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      }),
+    onSuccess: () => {
+      toast({
+        title: "Information Requested",
+        description: `An email has been sent to ${app?.companyName} asking for more details.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["reseller-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["reseller-applications-count"] });
+      setMessage("");
+      onClose();
+    },
+    onError: (err: Error) => {
+      toast({ variant: "destructive", title: "Error", description: err.message });
+    },
+  });
+
+  const handleClose = () => {
+    setMessage("");
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-blue-500" />
+            Request More Information
+          </DialogTitle>
+          <DialogDescription>
+            Send a message to <strong>{app?.companyName}</strong> asking for additional details.
+            Their application status will be updated to <em>Info Requested</em>.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3 py-1">
+          <div className="bg-muted/40 rounded-lg px-3 py-2 text-sm space-y-0.5">
+            <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Sending to</p>
+            <p className="font-medium">{app?.contactName} &mdash; <span className="text-primary">{app?.email}</span></p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-1.5">
+              Message <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={5}
+              placeholder="e.g. Could you please provide your business registration number and a brief description of the services you plan to resell?"
+              className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-primary/50 outline-none resize-none"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            The applicant will receive this message via email and can reply directly. An email notification requires SMTP to be configured in Company Settings.
+          </p>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose} disabled={mutation.isPending}>
+            Cancel
+          </Button>
+          <Button
+            className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5"
+            onClick={() => app && mutation.mutate({ id: app.id, message })}
+            disabled={mutation.isPending || !message.trim()}
+          >
+            <MessageSquare className="w-4 h-4" />
+            {mutation.isPending ? "Sending…" : "Send & Update Status"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -198,7 +414,6 @@ function ApproveDialog({
               <span className="font-medium">{app?.email}</span>
             </div>
           </div>
-
         </div>
 
         <DialogFooter>
@@ -261,8 +476,8 @@ function RejectDialog({
             Reject Application
           </DialogTitle>
           <DialogDescription>
-            Are you sure you want to reject <strong>{app?.companyName}</strong>'s application? 
-            They will not be able to log in, and you can review rejected applications later.
+            Are you sure you want to reject <strong>{app?.companyName}</strong>'s application?
+            They will not be able to log in, and you can review rejected applications in the Rejected tab.
           </DialogDescription>
         </DialogHeader>
 
@@ -298,8 +513,10 @@ function EmptyState({ message }: { message: string }) {
 
 export default function AdminResellerApplications() {
   const [search, setSearch] = useState("");
+  const [viewTarget, setViewTarget] = useState<Application | null>(null);
   const [approveTarget, setApproveTarget] = useState<Application | null>(null);
   const [rejectTarget, setRejectTarget] = useState<Application | null>(null);
+  const [requestInfoTarget, setRequestInfoTarget] = useState<Application | null>(null);
 
   const { data: applications = [], isLoading, isError } = useQuery<Application[]>({
     queryKey: ["reseller-applications"],
@@ -308,6 +525,8 @@ export default function AdminResellerApplications() {
   });
 
   const pending = applications.filter((a) => a.status === "pending");
+  const infoRequested = applications.filter((a) => a.status === "info_requested");
+  const actionable = [...pending, ...infoRequested];
   const rejected = applications.filter((a) => a.status === "rejected");
 
   const filtered = (list: Application[]) =>
@@ -346,11 +565,12 @@ export default function AdminResellerApplications() {
       </div>
 
       {/* Summary banner */}
-      {!isLoading && pending.length > 0 && (
+      {!isLoading && actionable.length > 0 && (
         <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5">
           <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
           <p className="text-sm text-amber-800 font-medium">
-            {pending.length} application{pending.length !== 1 ? "s" : ""} awaiting review
+            {actionable.length} application{actionable.length !== 1 ? "s" : ""} awaiting action
+            {infoRequested.length > 0 && ` (${infoRequested.length} info requested)`}
           </p>
         </div>
       )}
@@ -367,10 +587,18 @@ export default function AdminResellerApplications() {
         <Tabs defaultValue="pending">
           <TabsList className="mb-4">
             <TabsTrigger value="pending" className="gap-2">
-              Pending Review
+              Pending
               {pending.length > 0 && (
                 <span className="bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
                   {pending.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="info_requested" className="gap-2">
+              Info Requested
+              {infoRequested.length > 0 && (
+                <span className="bg-blue-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full leading-none">
+                  {infoRequested.length}
                 </span>
               )}
             </TabsTrigger>
@@ -402,8 +630,37 @@ export default function AdminResellerApplications() {
                 <ApplicationCard
                   key={app.id}
                   app={app}
+                  onView={setViewTarget}
                   onApprove={setApproveTarget}
                   onReject={setRejectTarget}
+                  onRequestInfo={setRequestInfoTarget}
+                />
+              ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="info_requested" className="space-y-3">
+            {isLoading ? (
+              Array.from({ length: 2 }).map((_, i) => (
+                <Skeleton key={i} className="h-28 w-full rounded-xl" />
+              ))
+            ) : filtered(infoRequested).length === 0 ? (
+              <EmptyState
+                message={
+                  search
+                    ? "No applications match your search"
+                    : "No applications awaiting information"
+                }
+              />
+            ) : (
+              filtered(infoRequested).map((app) => (
+                <ApplicationCard
+                  key={app.id}
+                  app={app}
+                  onView={setViewTarget}
+                  onApprove={setApproveTarget}
+                  onReject={setRejectTarget}
+                  onRequestInfo={setRequestInfoTarget}
                 />
               ))
             )}
@@ -424,7 +681,11 @@ export default function AdminResellerApplications() {
               />
             ) : (
               filtered(rejected).map((app) => (
-                <ApplicationCard key={app.id} app={app} />
+                <ApplicationCard
+                  key={app.id}
+                  app={app}
+                  onView={setViewTarget}
+                />
               ))
             )}
           </TabsContent>
@@ -432,6 +693,19 @@ export default function AdminResellerApplications() {
       )}
 
       {/* Dialogs */}
+      <ViewDialog
+        app={viewTarget}
+        open={!!viewTarget}
+        onClose={() => setViewTarget(null)}
+        onApprove={setApproveTarget}
+        onReject={setRejectTarget}
+        onRequestInfo={setRequestInfoTarget}
+      />
+      <RequestInfoDialog
+        app={requestInfoTarget}
+        open={!!requestInfoTarget}
+        onClose={() => setRequestInfoTarget(null)}
+      />
       <ApproveDialog
         app={approveTarget}
         open={!!approveTarget}

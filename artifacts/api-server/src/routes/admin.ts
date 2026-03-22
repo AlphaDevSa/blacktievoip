@@ -1,8 +1,9 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import bcrypt from "bcryptjs";
+import nodemailer from "nodemailer";
 import { db } from "@workspace/db";
-import { adminsTable, resellersTable, clientsTable } from "@workspace/db";
-import { eq, sql, ne } from "drizzle-orm";
+import { adminsTable, resellersTable, clientsTable, companySettingsTable } from "@workspace/db";
+import { eq, sql, ne, inArray } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -253,7 +254,7 @@ router.delete("/resellers/:id", async (req, res) => {
 
 router.get("/reseller-applications", async (_req, res) => {
   try {
-    const pending = await db
+    const applications = await db
       .select({
         id: resellersTable.id,
         companyName: resellersTable.companyName,
@@ -264,10 +265,10 @@ router.get("/reseller-applications", async (_req, res) => {
         createdAt: resellersTable.createdAt,
       })
       .from(resellersTable)
-      .where(eq(resellersTable.status, "pending"));
+      .where(inArray(resellersTable.status, ["pending", "info_requested", "rejected"]));
 
     return res.json(
-      pending.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }))
+      applications.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }))
     );
   } catch (err) {
     console.error("Get applications error:", err);
@@ -280,9 +281,71 @@ router.get("/reseller-applications/count", async (_req, res) => {
     const [row] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(resellersTable)
-      .where(eq(resellersTable.status, "pending"));
+      .where(inArray(resellersTable.status, ["pending", "info_requested"]));
     return res.json({ count: row.count });
   } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.patch("/resellers/:id/request-info", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { message } = req.body;
+    if (!message?.trim()) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    const [reseller] = await db
+      .update(resellersTable)
+      .set({ status: "info_requested" })
+      .where(eq(resellersTable.id, id))
+      .returning();
+    if (!reseller) return res.status(404).json({ error: "Reseller not found" });
+
+    // Send email via SMTP if configured
+    const [settings] = await db.select().from(companySettingsTable).limit(1);
+    if (settings) {
+      const host = settings.smtpHost || process.env.SMTP_HOST;
+      const port = parseInt(settings.smtpPort || process.env.SMTP_PORT || "587");
+      const user = settings.smtpUser || process.env.SMTP_USER;
+      const pass = settings.smtpPass || process.env.SMTP_PASS;
+      const from = settings.smtpFrom || settings.smtpUser || process.env.SMTP_FROM || process.env.SMTP_USER;
+      const secure = settings.smtpSecure ?? process.env.SMTP_SECURE === "true";
+      const companyName = settings.companyName || "Black Tie VoIP";
+
+      if (host && user && pass) {
+        const transporter = nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
+        await transporter.sendMail({
+          from: `"${companyName}" <${from}>`,
+          to: reseller.email,
+          subject: `Additional Information Required — ${companyName} Reseller Application`,
+          html: `
+            <div style="font-family:'Segoe UI',Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;">
+              <div style="background:#4BA3E3;border-radius:12px;padding:20px 24px;margin-bottom:24px;text-align:center;">
+                <h1 style="margin:0;color:#fff;font-size:20px;font-weight:800;">${companyName}</h1>
+                <p style="margin:4px 0 0;color:rgba(255,255,255,0.85);font-size:13px;">Reseller Portal</p>
+              </div>
+              <h2 style="color:#1e3a5f;font-size:18px;margin:0 0 8px;">Hi ${reseller.contactName},</h2>
+              <p style="color:#555;font-size:14px;margin:0 0 16px;">
+                Thank you for your reseller application. We need a little more information before we can proceed with your review.
+              </p>
+              <div style="background:#f7f9fc;border-left:4px solid #4BA3E3;border-radius:6px;padding:16px 20px;margin-bottom:20px;">
+                <p style="color:#333;font-size:14px;margin:0;white-space:pre-line;">${message.trim()}</p>
+              </div>
+              <p style="color:#555;font-size:14px;margin:0 0 8px;">
+                Please reply to this email with the requested information and we will continue with your application.
+              </p>
+              <p style="color:#aaa;font-size:11px;margin:24px 0 0;text-align:center;">© ${new Date().getFullYear()} ${companyName}. This is an automated notification.</p>
+            </div>
+          `,
+        });
+      }
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Request info error:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
