@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
   useGetCatalogServices,
@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { formatZar } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 
 interface CartItem {
@@ -114,6 +114,7 @@ function CartItemRow({
 
 export default function ResellerNewOrder() {
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
   const { toast } = useToast();
   const { data: services = [] } = useGetCatalogServices();
   const { data: products = [] } = useGetCatalogProducts();
@@ -131,12 +132,70 @@ export default function ResellerNewOrder() {
     },
   });
 
-  const [tab, setTab] = useState<OrderTab>("services");
+  const params = new URLSearchParams(searchString);
+  const prefillTab = params.get("tab") as OrderTab | null;
+
+  const [tab, setTab] = useState<OrderTab>(
+    prefillTab && ["services","products","dids","hosting","domains"].includes(prefillTab)
+      ? prefillTab
+      : "services"
+  );
   const [selectedAreaCodeId, setSelectedAreaCodeId] = useState<number | undefined>();
   const [selectedClientId, setSelectedClientId] = useState<number | undefined>();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [prefillApplied, setPrefillApplied] = useState(false);
+
+  // Pre-populate cart from ?add=type:id param once catalog data has loaded
+  useEffect(() => {
+    if (prefillApplied) return;
+    const addParam = params.get("add");
+    if (!addParam) { setPrefillApplied(true); return; }
+
+    const [type, idStr] = addParam.split(":");
+    const id = parseInt(idStr ?? "");
+    if (!type || !id) { setPrefillApplied(true); return; }
+
+    if (type === "service" && (services as Service[]).length > 0) {
+      const item = (services as Service[]).find(s => s.id === id);
+      if (item) {
+        const exclVat = Number(item.resellerPriceExclVat ?? item.retailPriceExclVat ?? 0);
+        const inclVat = item.resellerPriceExclVat != null
+          ? Number(item.resellerPriceInclVat ?? exclVat * 1.15)
+          : Number(item.priceInclVat ?? exclVat * 1.15);
+        setCart([{ referenceId: id, itemType: "service", name: item.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 }]);
+        setTab("services");
+      }
+      setPrefillApplied(true);
+    } else if (type === "product" && (products as Product[]).length > 0) {
+      const item = (products as Product[]).find(p => p.id === id);
+      if (item) {
+        const exclVat = Number(item.resellerPriceExclVat ?? item.retailPriceExclVat ?? 0);
+        const inclVat = item.resellerPriceExclVat != null
+          ? Number(item.resellerPriceInclVat ?? exclVat * 1.15)
+          : Number(item.priceInclVat ?? exclVat * 1.15);
+        setCart([{ referenceId: id, itemType: "product", name: item.name, sku: item.sku ?? undefined, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 }]);
+        setTab("products");
+      }
+      setPrefillApplied(true);
+    } else if (type === "hosting" && (hostingPackages as HostingPackage[]).length > 0) {
+      const item = (hostingPackages as HostingPackage[]).find(h => h.id === id);
+      if (item) {
+        const exclVat = Number(item.resellerPriceExclVat ?? item.retailPriceExclVat ?? 0);
+        const inclVat = item.resellerPriceExclVat != null
+          ? Number(item.resellerPriceInclVat ?? exclVat * 1.15)
+          : Number(item.priceInclVat ?? exclVat * 1.15);
+        setCart([{ referenceId: id, itemType: "hosting", name: item.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 }]);
+        setTab("hosting");
+      }
+      setPrefillApplied(true);
+    } else if (type === "domain" && (domainTlds as DomainTld[]).length > 0) {
+      // Domain TLD — just switch to the domains tab; user fills in the actual domain name
+      setTab("domains");
+      setPrefillApplied(true);
+    }
+  }, [services, products, hostingPackages, domainTlds, prefillApplied]);
 
   // Domain checker state
   const [domainInput, setDomainInput] = useState("");
