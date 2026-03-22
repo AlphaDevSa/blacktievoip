@@ -1,6 +1,8 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SignalHigh } from "lucide-react";
 
+const AXXESS_API_KEY = import.meta.env.VITE_AXXESS_API_KEY ?? "";
+
 const TELKOM_SRCDOC = `<!DOCTYPE html>
 <html>
 <head>
@@ -14,7 +16,7 @@ const TELKOM_SRCDOC = `<!DOCTYPE html>
   ax.id='mainscript';
   ax.type='text/javascript';
   ax.async=true;
-  ax.src='https://rcp.axxess.co.za/public/js/telkomLteJs.php?key=AIzaSyCzurWEBCAU4SdsPtuXgvqslSTd558NCO0&width=100%&height=520px';
+  ax.src='https://rcp.axxess.co.za/public/js/telkomLteJs.php?key=${AXXESS_API_KEY}&width=100%&height=520px';
   var s=document.getElementsByTagName('script')[0];
   s.parentNode.insertBefore(ax,s);
 })();
