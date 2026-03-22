@@ -55,9 +55,11 @@ Tables: `admins`, `resellers`, `clients`, `services`, `service_categories`, `pro
 
 ## API Routing
 
-- All API routes are at `/api/*`
-- Frontend is served at `/`
-- Replit's proxy routes `/api` requests to the API server (port 8080) and all other requests to the frontend (port 5000)
+- All API routes are at `/api/*` handled by Express (port 8080)
+- The API server (port 8080 → external port 80) is the primary entry point in dev mode
+- In development, Express proxies non-/api requests to the Vite dev server (port 5000) via `http-proxy-middleware`
+- The Vite server on port 5000 also has a proxy for `/api` → port 8080 (for direct Vite access)
+- This dual-proxy ensures the app works correctly regardless of which port the browser hits
 
 ## Authentication
 

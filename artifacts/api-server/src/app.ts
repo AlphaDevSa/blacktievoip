@@ -38,4 +38,17 @@ app.use(
 
 app.use("/api", router);
 
+if (!isProduction) {
+  const { createProxyMiddleware } = await import("http-proxy-middleware");
+  const vitePort = process.env.VITE_PORT || "5000";
+  const viteTarget = `http://localhost:${vitePort}`;
+  app.use(
+    createProxyMiddleware({
+      target: viteTarget,
+      changeOrigin: true,
+      ws: true,
+    })
+  );
+}
+
 export default app;
