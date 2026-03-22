@@ -17,10 +17,8 @@ import { formatZar } from "@/lib/utils";
 type DomainCheckResult = {
   domain: string;
   available: boolean;
-  status: "available" | "registered" | "unknown" | "timeout";
-  registrar?: string | null;
-  expiresAt?: string | null;
-  registrationStatus?: string | null;
+  status: "available" | "registered" | "unknown";
+  nameservers?: string[];
 };
 
 type Tab = "services" | "products" | "hosting" | "domains";
@@ -354,26 +352,12 @@ export default function ResellerCatalog() {
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-red-700 dark:text-red-400 font-mono">{domainResult.domain}</p>
                             <p className="text-sm text-red-600 dark:text-red-500 mb-2">This domain is already registered.</p>
-                            <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-                              {domainResult.registrar && (
-                                <span><span className="font-semibold">Registrar:</span> {domainResult.registrar}</span>
-                              )}
-                              {domainResult.expiresAt && (
-                                <span><span className="font-semibold">Expires:</span> {new Date(domainResult.expiresAt).toLocaleDateString()}</span>
-                              )}
-                              {domainResult.registrationStatus && (
-                                <span><span className="font-semibold">Status:</span> {domainResult.registrationStatus}</span>
-                              )}
-                            </div>
+                            {domainResult.nameservers && domainResult.nameservers.length > 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                <span className="font-semibold">Nameservers:</span> {domainResult.nameservers.join(", ")}
+                              </p>
+                            )}
                           </div>
-                        </div>
-                      </div>
-                    ) : domainResult.status === "timeout" ? (
-                      <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
-                        <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-                        <div>
-                          <p className="font-semibold text-amber-700 dark:text-amber-400 text-sm">Check timed out</p>
-                          <p className="text-xs text-amber-600 dark:text-amber-500">The registry took too long to respond. Please try again.</p>
                         </div>
                       </div>
                     ) : (

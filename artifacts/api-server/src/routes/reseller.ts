@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import { db } from "@workspace/db";
 import { resellersTable, clientsTable, didsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
+import { promises as dnsPromises } from "dns";
 
 const router: IRouter = Router();
 
@@ -355,34 +356,24 @@ router.delete("/clients/:id", async (req, res) => {
 
 router.get("/check-domain", async (req, res) => {
   const domain = (req.query.domain as string || "").trim().toLowerCase();
-  if (!domain || !/^[a-z0-9][a-z0-9\-\.]{1,61}[a-z0-9]\.[a-z]{2,}$/.test(domain)) {
+  if (!domain || !/^[a-z0-9][a-z0-9\-.]{1,61}[a-z0-9]\.[a-z]{2,}$/.test(domain)) {
     return res.status(400).json({ error: "Invalid domain name" });
   }
   try {
-    const rdapUrl = `https://rdap.org/domain/${domain}`;
-    const response = await fetch(rdapUrl, {
-      headers: { Accept: "application/rdap+json" },
-      signal: AbortSignal.timeout(8000),
+    // DNS NS record lookup: if nameservers exist the domain is registered;
+    // ENOTFOUND / ENODATA means it is available. This works for all TLDs
+    // including South African ccTLDs (.co.za, .org.za, etc.) and needs no
+    // external API key or network service that may be unreachable.
+    const nameservers = await dnsPromises.resolveNs(domain);
+    return res.json({
+      domain,
+      available: false,
+      status: "registered",
+      nameservers: nameservers.slice(0, 4),
     });
-    if (response.status === 404) {
-      return res.json({ domain, available: true, status: "available" });
-    }
-    if (response.ok) {
-      const data = await response.json() as any;
-      const regStatus = data.status ?? [];
-      return res.json({
-        domain,
-        available: false,
-        status: "registered",
-        registrar: data.entities?.find((e: any) => e.roles?.includes("registrar"))?.vcardArray?.[1]?.find((f: any) => f[0] === "fn")?.[3] ?? null,
-        expiresAt: data.events?.find((e: any) => e.eventAction === "expiration")?.eventDate ?? null,
-        registrationStatus: Array.isArray(regStatus) ? regStatus.join(", ") : regStatus,
-      });
-    }
-    return res.json({ domain, available: false, status: "unknown" });
   } catch (err: any) {
-    if (err?.name === "TimeoutError") {
-      return res.json({ domain, available: false, status: "timeout" });
+    if (err?.code === "ENOTFOUND" || err?.code === "ENODATA" || err?.code === "ESERVFAIL") {
+      return res.json({ domain, available: true, status: "available" });
     }
     console.error("Domain check error:", err);
     return res.status(500).json({ error: "Domain check failed" });
