@@ -42,6 +42,14 @@ export const companySettingsTable = pgTable("company_settings", {
   smtpPass: text("smtp_pass"),
   smtpFrom: text("smtp_from"),
   smtpSecure: boolean("smtp_secure").default(false),
+  // Bank Details
+  bankName: text("bank_name"),
+  bankAccountHolder: text("bank_account_holder"),
+  bankAccountNumber: text("bank_account_number"),
+  bankAccountType: text("bank_account_type"),
+  bankBranchCode: text("bank_branch_code"),
+  bankSwiftCode: text("bank_swift_code"),
+  bankReference: text("bank_reference"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

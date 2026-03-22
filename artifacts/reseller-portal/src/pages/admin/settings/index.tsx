@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   Building2, Save, Globe, Phone, Mail, MapPin, Receipt, Palette,
-  Server, Eye, EyeOff, FlaskConical, CheckCircle2, XCircle, Loader2,
+  Server, Eye, EyeOff, FlaskConical, CheckCircle2, XCircle, Loader2, Landmark,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -46,6 +46,13 @@ export default function AdminCompanySettings() {
     smtpPass: "",
     smtpFrom: "",
     smtpSecure: false,
+    bankName: "",
+    bankAccountHolder: "",
+    bankAccountNumber: "",
+    bankAccountType: "",
+    bankBranchCode: "",
+    bankSwiftCode: "",
+    bankReference: "",
   });
 
   const [isDirty, setIsDirty] = useState(false);
@@ -78,6 +85,13 @@ export default function AdminCompanySettings() {
         smtpPass: s.smtpPass ?? "",
         smtpFrom: s.smtpFrom ?? "",
         smtpSecure: s.smtpSecure ?? false,
+        bankName: s.bankName ?? "",
+        bankAccountHolder: s.bankAccountHolder ?? "",
+        bankAccountNumber: s.bankAccountNumber ?? "",
+        bankAccountType: s.bankAccountType ?? "",
+        bankBranchCode: s.bankBranchCode ?? "",
+        bankSwiftCode: s.bankSwiftCode ?? "",
+        bankReference: s.bankReference ?? "",
       });
       setIsDirty(false);
     }
@@ -144,6 +158,13 @@ export default function AdminCompanySettings() {
       smtpPass: s.smtpPass ?? "",
       smtpFrom: s.smtpFrom ?? "",
       smtpSecure: s.smtpSecure ?? false,
+      bankName: s.bankName ?? "",
+      bankAccountHolder: s.bankAccountHolder ?? "",
+      bankAccountNumber: s.bankAccountNumber ?? "",
+      bankAccountType: s.bankAccountType ?? "",
+      bankBranchCode: s.bankBranchCode ?? "",
+      bankSwiftCode: s.bankSwiftCode ?? "",
+      bankReference: s.bankReference ?? "",
     });
     setIsDirty(false);
   };
@@ -442,6 +463,57 @@ export default function AdminCompanySettings() {
               <p className="text-xs text-muted-foreground mt-2">
                 Sends a test email to your company email address to verify the SMTP connection. Save settings first if you've made changes.
               </p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Bank Details */}
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="bg-card border border-border rounded-2xl shadow-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-border/50 bg-muted/20 flex items-center gap-2">
+            <Landmark className="w-4 h-4 text-primary" />
+            <h2 className="font-semibold text-foreground">Bank Details</h2>
+            <span className="ml-auto text-xs text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full border border-border/60">Printed on invoices &amp; statements</span>
+          </div>
+          <div className="p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Bank Name</label>
+                <input value={form.bankName} onChange={e => set("bankName", e.target.value)} className={inputCls} placeholder="e.g. First National Bank" />
+              </div>
+              <div>
+                <label className={labelCls}>Account Holder Name</label>
+                <input value={form.bankAccountHolder} onChange={e => set("bankAccountHolder", e.target.value)} className={inputCls} placeholder="e.g. Black Tie VoIP (Pty) Ltd" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Account Number</label>
+                <input value={form.bankAccountNumber} onChange={e => set("bankAccountNumber", e.target.value)} className={inputCls} placeholder="e.g. 62012345678" />
+              </div>
+              <div>
+                <label className={labelCls}>Account Type</label>
+                <select value={form.bankAccountType} onChange={e => set("bankAccountType", e.target.value)} className={inputCls + " appearance-none"}>
+                  <option value="">Select…</option>
+                  <option value="Current">Current</option>
+                  <option value="Savings">Savings</option>
+                  <option value="Transmission">Transmission</option>
+                  <option value="Bond">Bond</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Branch Code <span className="text-xs font-normal">(universal branch code)</span></label>
+                <input value={form.bankBranchCode} onChange={e => set("bankBranchCode", e.target.value)} className={inputCls} placeholder="e.g. 250655" maxLength={10} />
+              </div>
+              <div>
+                <label className={labelCls}>SWIFT / BIC Code <span className="text-xs font-normal">(optional)</span></label>
+                <input value={form.bankSwiftCode} onChange={e => set("bankSwiftCode", e.target.value)} className={inputCls} placeholder="e.g. FIRNZAJJ" maxLength={11} />
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>Payment Reference <span className="text-xs font-normal">(optional — e.g. invoice number placeholder)</span></label>
+              <input value={form.bankReference} onChange={e => set("bankReference", e.target.value)} className={inputCls} placeholder="e.g. Invoice No." />
             </div>
           </div>
         </motion.div>
