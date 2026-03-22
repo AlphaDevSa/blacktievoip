@@ -82,8 +82,10 @@ function CartItemRow({
           </p>
         ) : (item.itemType === "service" || item.itemType === "hosting" || item.itemType === "did") ? (
           <p className="text-xs text-muted-foreground">
-            {formatZar(item.unitPriceExclVat)} excl VAT × {item.quantity} = <span className="text-foreground font-semibold">{formatZar(item.unitPriceExclVat * item.quantity)}</span>
-            <span className="text-muted-foreground/70 ml-1">/month</span>
+            {item.unitPriceExclVat === 0
+              ? <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Free</span>
+              : <>{formatZar(item.unitPriceExclVat)} excl VAT × {item.quantity} = <span className="text-foreground font-semibold">{formatZar(item.unitPriceExclVat * item.quantity)}</span><span className="text-muted-foreground/70 ml-1">/month</span></>
+            }
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
@@ -130,8 +132,8 @@ export default function ResellerNewOrder() {
       return res.json() as Promise<{ exclVat: number | null; inclVat: number | null }>;
     },
   });
-  const didPriceExcl = didPricing?.exclVat ?? 60;
-  const didPriceIncl = didPricing?.inclVat ?? (didPriceExcl * 1.15);
+  const didPriceExcl = didPricing?.exclVat ?? 0;
+  const didPriceIncl = didPricing?.inclVat ?? 0;
   const createOrder = useCreateOrder();
 
   // Helper: identify services that need a DID (VoIP line / PBX extension)
@@ -764,8 +766,8 @@ export default function ResellerNewOrder() {
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                               <div className="text-right mr-1">
-                                <p className="text-xs font-semibold text-primary">{formatZar(didPriceIncl)}</p>
-                                <p className="text-xs text-muted-foreground">/month incl VAT</p>
+                                <p className="text-xs font-semibold text-primary">{didPriceExcl === 0 ? "Free" : `${formatZar(didPriceExcl)} excl VAT`}</p>
+                                {didPriceExcl > 0 && <p className="text-xs text-muted-foreground">/month</p>}
                               </div>
                               {inCart ? (
                                 <button onClick={() => removeFromCart(did.id, "did")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors">
