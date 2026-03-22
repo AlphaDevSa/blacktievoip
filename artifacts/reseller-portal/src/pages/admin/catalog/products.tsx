@@ -4,6 +4,8 @@ import {
   useAdminGetProductCategories, 
   useAdminGetProducts,
   useAdminCreateProductCategory,
+  useAdminUpdateProductCategory,
+  useAdminDeleteProductCategory,
   useAdminCreateProduct,
   useAdminUpdateProduct,
   useAdminDeleteProduct,
@@ -11,8 +13,8 @@ import {
   Product
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { Plus, Package, FolderTree, Trash2, Edit2, Tag, LayoutGrid, List } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Package, FolderTree, Trash2, Edit2, Tag, LayoutGrid, List, Folder, ChevronRight } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { formatZar } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -34,12 +36,17 @@ export default function AdminProductsCatalog() {
   
   const [selectedCatId, setSelectedCatId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("card");
+  const [sidebarMode, setSidebarMode] = useState<"browse" | "manage">("browse");
+  const [expandedCats, setExpandedCats] = useState<Set<number>>(new Set());
   
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingCat, setEditingCat] = useState<Category | null>(null);
 
   const createCat = useAdminCreateProductCategory();
+  const updateCat = useAdminUpdateProductCategory();
+  const deleteCat = useAdminDeleteProductCategory();
   const createProduct = useAdminCreateProduct();
   const updateProduct = useAdminUpdateProduct();
   const deleteProduct = useAdminDeleteProduct();
@@ -48,7 +55,14 @@ export default function AdminProductsCatalog() {
     ? products.filter(p => p.categoryId === selectedCatId)
     : products;
 
-  const [catForm, setCatForm] = useState({ name: "", description: "", parentId: "" });
+  const parentCategories = (categories as Category[]).filter(c => !c.parentId);
+  const subCatsOf = (id: number) => (categories as Category[]).filter(c => c.parentId === id);
+
+  function toggleExpand(id: number) {
+    setExpandedCats(prev => { const s = new Set(prev); if (s.has(id)) s.delete(id); else s.add(id); return s; });
+  }
+
+  const [catForm, setCatForm] = useState({ name: "", description: "", parentId: "", sortOrder: "0" });
   const [productForm, setProductForm] = useState(emptyProductForm);
 
   const handleRetailPriceChange = (val: string) => {
@@ -87,25 +101,45 @@ export default function AdminProductsCatalog() {
     setIsProductModalOpen(true);
   };
 
-  const handleCatSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  function openCreateCat(parentId?: number) {
+    setEditingCat(null);
+    setCatForm({ name: "", description: "", parentId: parentId ? String(parentId) : "", sortOrder: "0" });
+    setIsCatModalOpen(true);
+  }
+
+  function openEditCat(cat: Category) {
+    setEditingCat(cat);
+    setCatForm({ name: cat.name, description: cat.description ?? "", parentId: cat.parentId ? String(cat.parentId) : "", sortOrder: String(cat.sortOrder) });
+    setIsCatModalOpen(true);
+  }
+
+  async function handleSaveCat() {
+    if (!catForm.name.trim()) { toast({ title: "Name is required", variant: "destructive" }); return; }
+    const payload = { name: catForm.name.trim(), description: catForm.description.trim() || undefined, parentId: catForm.parentId ? parseInt(catForm.parentId) : undefined, sortOrder: parseInt(catForm.sortOrder) || 0 };
     try {
-      await createCat.mutateAsync({
-        data: {
-          name: catForm.name,
-          description: catForm.description,
-          parentId: catForm.parentId ? parseInt(catForm.parentId) : undefined,
-          sortOrder: 0
-        }
-      });
-      toast({ title: "Category created" });
-      setIsCatModalOpen(false);
-      setCatForm({ name: "", description: "", parentId: "" });
+      if (editingCat) {
+        await updateCat.mutateAsync({ id: editingCat.id, data: payload });
+        toast({ title: `"${payload.name}" updated` });
+      } else {
+        await createCat.mutateAsync({ data: payload });
+        toast({ title: `"${payload.name}" created` });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/admin/product-categories"] });
-    } catch {
-      toast({ title: "Error creating category", variant: "destructive" });
-    }
-  };
+      setIsCatModalOpen(false);
+    } catch { toast({ title: "Failed to save category", variant: "destructive" }); }
+  }
+
+  async function handleDeleteCat(cat: Category) {
+    if ((categories as Category[]).some(c => c.parentId === cat.id)) { toast({ title: "Remove sub-categories first", variant: "destructive" }); return; }
+    if (products.some(p => p.categoryId === cat.id)) { toast({ title: "Reassign products before deleting this category", variant: "destructive" }); return; }
+    if (!confirm(`Delete "${cat.name}"?`)) return;
+    try {
+      await deleteCat.mutateAsync({ id: cat.id });
+      toast({ title: `"${cat.name}" deleted` });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/product-categories"] });
+      if (selectedCatId === cat.id) setSelectedCatId(null);
+    } catch { toast({ title: "Failed to delete", variant: "destructive" }); }
+  }
 
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,49 +199,130 @@ export default function AdminProductsCatalog() {
         
         {/* Category sidebar */}
         <div className="w-full lg:w-56 flex flex-col bg-card border border-border rounded-2xl shadow-lg overflow-hidden shrink-0">
-          <div className="p-4 border-b border-border/50 flex items-center justify-between bg-muted/20">
-            <h3 className="font-display font-bold flex items-center gap-2">
-              <FolderTree className="w-4 h-4 text-primary" />
-              Categories
-            </h3>
-            <button 
-              onClick={() => setIsCatModalOpen(true)}
-              className="p-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            <button
-              onClick={() => setSelectedCatId(null)}
-              className={`w-full text-left flex items-center justify-between p-3 rounded-xl text-sm font-medium transition-all ${
-                selectedCatId === null 
-                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" 
-                  : "hover:bg-black/5 text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <span>All Products</span>
-              <span className={`px-2 py-0.5 rounded-full text-xs ${selectedCatId === null ? "bg-black/[0.1]" : "bg-black/[0.07]"}`}>
-                {products.length}
-              </span>
-            </button>
-            
-            {categories.map((cat: Category) => (
+          <div className="p-3 border-b border-border/50 bg-muted/20">
+            <div className="flex items-center gap-1 p-1 bg-muted/30 border border-border rounded-xl">
               <button
-                key={cat.id}
-                onClick={() => setSelectedCatId(cat.id)}
-                className={`w-full text-left flex items-center justify-between p-3 rounded-xl text-sm font-medium transition-all ${
-                  selectedCatId === cat.id 
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" 
-                    : "hover:bg-black/5 text-muted-foreground hover:text-foreground"
-                }`}
+                onClick={() => setSidebarMode("browse")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${sidebarMode === "browse" ? "bg-background text-foreground shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"}`}
               >
-                <div className="flex items-center gap-2">
-                  <Tag className="w-4 h-4 opacity-50" />
-                  {cat.name}
-                </div>
+                <Package className="w-3 h-3" /> Browse
               </button>
-            ))}
+              <button
+                onClick={() => setSidebarMode("manage")}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${sidebarMode === "manage" ? "bg-background text-foreground shadow-sm border border-border" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <FolderTree className="w-3 h-3" /> Manage
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2">
+            <AnimatePresence mode="wait">
+              {sidebarMode === "browse" ? (
+                <motion.div key="browse" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="space-y-1">
+                  <button
+                    onClick={() => setSelectedCatId(null)}
+                    className={`w-full text-left flex items-center justify-between p-3 rounded-xl text-sm font-medium transition-all ${selectedCatId === null ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "hover:bg-black/5 text-muted-foreground hover:text-foreground"}`}
+                  >
+                    <span>All Products</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${selectedCatId === null ? "bg-black/[0.1]" : "bg-black/[0.07]"}`}>{products.length}</span>
+                  </button>
+                  {parentCategories.map(parent => {
+                    const subs = subCatsOf(parent.id);
+                    return (
+                      <div key={parent.id}>
+                        <button
+                          onClick={() => setSelectedCatId(parent.id === selectedCatId ? null : parent.id)}
+                          className={`w-full text-left flex items-center justify-between p-3 rounded-xl text-xs font-semibold transition-all ${selectedCatId === parent.id ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "hover:bg-black/5 text-muted-foreground hover:text-foreground"}`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0"><Tag className="w-3.5 h-3.5 shrink-0" /><span className="truncate">{parent.name}</span></div>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ${selectedCatId === parent.id ? "bg-white/20" : "bg-muted text-muted-foreground"}`}>{products.filter(p => p.categoryId === parent.id).length}</span>
+                        </button>
+                        {subs.map(sub => (
+                          <button key={sub.id} onClick={() => setSelectedCatId(sub.id === selectedCatId ? null : sub.id)}
+                            className={`w-full text-left flex items-center justify-between pl-7 pr-3 py-1.5 rounded-xl text-xs transition-all ${selectedCatId === sub.id ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 font-semibold" : "text-muted-foreground hover:bg-black/5 hover:text-foreground"}`}
+                          >
+                            <div className="flex items-center gap-1.5 min-w-0"><Tag className="w-2.5 h-2.5 shrink-0" /><span className="truncate">{sub.name}</span></div>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ${selectedCatId === sub.id ? "bg-white/20" : "bg-muted text-muted-foreground"}`}>{products.filter(p => p.categoryId === sub.id).length}</span>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </motion.div>
+              ) : (
+                <motion.div key="manage" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="space-y-2">
+                  <div className="flex gap-1.5">
+                    <div className="flex-1 bg-background border border-border rounded-lg p-2 text-center">
+                      <p className="text-lg font-bold text-foreground">{parentCategories.length}</p>
+                      <p className="text-[10px] text-muted-foreground">Categories</p>
+                    </div>
+                    <div className="flex-1 bg-background border border-border rounded-lg p-2 text-center">
+                      <p className="text-lg font-bold text-foreground">{(categories as Category[]).filter(c => !!c.parentId).length}</p>
+                      <p className="text-[10px] text-muted-foreground">Sub-cats</p>
+                    </div>
+                  </div>
+                  <button onClick={() => openCreateCat()} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-primary/40 text-xs font-semibold text-primary hover:bg-primary/5 transition-all">
+                    <Plus className="w-3.5 h-3.5" /> Add Category
+                  </button>
+                  {parentCategories.length === 0 ? (
+                    <div className="text-center py-6 text-muted-foreground/50">
+                      <FolderTree className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-xs">No categories yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {parentCategories.map(parent => {
+                        const subs = subCatsOf(parent.id);
+                        const isExpanded = expandedCats.has(parent.id);
+                        return (
+                          <div key={parent.id} className="bg-background border border-border rounded-xl overflow-hidden">
+                            <div className="flex items-center gap-1.5 px-2.5 py-2 group">
+                              <button onClick={() => toggleExpand(parent.id)} className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
+                                <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-150 ${isExpanded ? "rotate-90" : ""} ${subs.length === 0 ? "opacity-20" : ""}`} />
+                              </button>
+                              <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                                <Folder className="w-3 h-3 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-foreground truncate">{parent.name}</p>
+                                <p className="text-[10px] text-muted-foreground">{subs.length} sub · {products.filter(p => p.categoryId === parent.id).length} items</p>
+                              </div>
+                              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                <button onClick={() => openCreateCat(parent.id)} title="Add sub-category" className="p-1 hover:bg-emerald-500/10 rounded text-muted-foreground hover:text-emerald-600 transition-colors"><Plus className="w-3 h-3" /></button>
+                                <button onClick={() => openEditCat(parent)} title="Edit" className="p-1 hover:bg-primary/10 rounded text-muted-foreground hover:text-primary transition-colors"><Edit2 className="w-3 h-3" /></button>
+                                <button onClick={() => handleDeleteCat(parent)} title="Delete" className="p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="w-3 h-3" /></button>
+                              </div>
+                            </div>
+                            <AnimatePresence>
+                              {isExpanded && (
+                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }} className="overflow-hidden border-t border-border/50 bg-muted/5">
+                                  {subs.map(sub => (
+                                    <div key={sub.id} className="flex items-center gap-1.5 pl-8 pr-2.5 py-1.5 group/sub border-t border-dashed border-border/30 first:border-t-0">
+                                      <Tag className="w-2.5 h-2.5 text-primary/50 shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-[11px] font-medium text-foreground truncate">{sub.name}</p>
+                                        <p className="text-[10px] text-muted-foreground">{products.filter(p => p.categoryId === sub.id).length} items</p>
+                                      </div>
+                                      <div className="flex items-center gap-0.5 opacity-0 group-hover/sub:opacity-100 transition-opacity shrink-0">
+                                        <button onClick={() => openEditCat(sub)} className="p-1 hover:bg-primary/10 rounded text-muted-foreground hover:text-primary transition-colors"><Edit2 className="w-2.5 h-2.5" /></button>
+                                        <button onClick={() => handleDeleteCat(sub)} className="p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="w-2.5 h-2.5" /></button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  <button onClick={() => openCreateCat(parent.id)} className="w-full flex items-center gap-1.5 pl-8 pr-2.5 py-1.5 text-[11px] text-primary/60 hover:text-primary hover:bg-primary/5 transition-colors border-t border-dashed border-border/30">
+                                    <Plus className="w-2.5 h-2.5" /> Add sub-category
+                                  </button>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -432,22 +547,37 @@ export default function AdminProductsCatalog() {
         </div>
       </div>
 
-      {/* Add Category Modal */}
-      <Modal isOpen={isCatModalOpen} onClose={() => setIsCatModalOpen(false)} title="Add Product Category">
-        <form onSubmit={handleCatSubmit} className="space-y-4">
+      {/* Category Modal */}
+      <Modal isOpen={isCatModalOpen} onClose={() => setIsCatModalOpen(false)} title={editingCat ? `Edit: ${editingCat.name}` : catForm.parentId ? "Add Sub-Category" : "Add Category"} maxWidth="max-w-md">
+        <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1.5">Category Name</label>
-            <input required value={catForm.name} onChange={e => setCatForm({...catForm, name: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/50 outline-none" placeholder="e.g., IP Phones" />
+            <label className="block text-xs font-semibold text-foreground mb-1.5">Type</label>
+            <select value={catForm.parentId} onChange={e => setCatForm(f => ({ ...f, parentId: e.target.value }))} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30">
+              <option value="">— Top-level category</option>
+              {parentCategories.filter(p => !editingCat || p.id !== editingCat.id).map(p => (
+                <option key={p.id} value={p.id}>Sub-category of: {p.name}</option>
+              ))}
+            </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1.5">Description</label>
-            <textarea value={catForm.description} onChange={e => setCatForm({...catForm, description: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/50 outline-none" placeholder="Description..." />
+            <label className="block text-xs font-semibold text-foreground mb-1.5">Name *</label>
+            <input value={catForm.name} onChange={e => setCatForm(f => ({ ...f, name: e.target.value }))} autoFocus className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder={catForm.parentId ? "e.g., IP Phones" : "e.g., Hardware"} />
           </div>
-          <div className="pt-4 flex justify-end gap-3">
-            <button type="button" onClick={() => setIsCatModalOpen(false)} className="px-5 py-2.5 rounded-xl font-medium text-muted-foreground hover:bg-black/5 transition-colors">Cancel</button>
-            <button type="submit" disabled={createCat.isPending} className="px-5 py-2.5 rounded-xl font-semibold bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all disabled:opacity-50">Save Category</button>
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">Description</label>
+            <textarea value={catForm.description} onChange={e => setCatForm(f => ({ ...f, description: e.target.value }))} rows={2} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" placeholder="Optional description..." />
           </div>
-        </form>
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">Sort Order</label>
+            <input type="number" value={catForm.sortOrder} onChange={e => setCatForm(f => ({ ...f, sortOrder: e.target.value }))} className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button onClick={() => setIsCatModalOpen(false)} className="flex-1 px-4 py-2 border border-border rounded-xl text-sm font-semibold text-muted-foreground hover:bg-muted/20 transition-colors">Cancel</button>
+            <button onClick={handleSaveCat} disabled={createCat.isPending || updateCat.isPending} className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors shadow-md shadow-primary/20 disabled:opacity-60">
+              {editingCat ? "Save Changes" : "Create"}
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {/* Add / Edit Product Modal */}
