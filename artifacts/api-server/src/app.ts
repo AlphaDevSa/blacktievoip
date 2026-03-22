@@ -2,6 +2,7 @@ import express, { type Express } from "express";
 import cors from "cors";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import { createProxyMiddleware } from "http-proxy-middleware";
 import router from "./routes";
 
 const PgStore = connectPgSimple(session);
@@ -39,12 +40,10 @@ app.use(
 app.use("/api", router);
 
 if (!isProduction) {
-  const { createProxyMiddleware } = await import("http-proxy-middleware");
   const vitePort = process.env.VITE_PORT || "5000";
-  const viteTarget = `http://localhost:${vitePort}`;
   app.use(
     createProxyMiddleware({
-      target: viteTarget,
+      target: `http://localhost:${vitePort}`,
       changeOrigin: true,
       ws: true,
     })
