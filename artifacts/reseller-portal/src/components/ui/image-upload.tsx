@@ -1,5 +1,4 @@
 import { useRef, useState, useCallback } from "react";
-import { useUpload } from "@workspace/object-storage-web";
 import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
 
 interface ImageUploadProps {
@@ -18,26 +17,41 @@ export function getImageSrc(url: string): string {
 export function ImageUpload({ value, onChange, label = "Product Image" }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [urlInput, setUrlInput] = useState(value.startsWith("/objects/") ? "" : value);
 
-  const { uploadFile, isUploading, progress } = useUpload({
-    onSuccess: (response) => {
-      onChange(response.objectPath);
-      setUrlInput("");
-    },
-  });
-
-  const handleFile = useCallback(async (file: File) => {
+  const uploadFile = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) return;
-    await uploadFile(file);
-  }, [uploadFile]);
+    setIsUploading(true);
+    setProgress(10);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      setProgress(30);
+      const res = await fetch("/api/storage/upload", { method: "POST", body: formData });
+      setProgress(90);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Upload failed");
+      }
+      const data = await res.json();
+      onChange(data.objectPath);
+      setUrlInput("");
+      setProgress(100);
+    } catch (err) {
+      console.error("Image upload failed:", err);
+    } finally {
+      setIsUploading(false);
+    }
+  }, [onChange]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file) handleFile(file);
-  }, [handleFile]);
+    if (file) uploadFile(file);
+  }, [uploadFile]);
 
   const handleUrlBlur = () => {
     if (urlInput.trim()) {
@@ -149,7 +163,7 @@ export function ImageUpload({ value, onChange, label = "Product Image" }: ImageU
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) handleFile(file);
+          if (file) uploadFile(file);
         }}
       />
     </div>
