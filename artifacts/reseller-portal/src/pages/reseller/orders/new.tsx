@@ -130,6 +130,12 @@ export default function ResellerNewOrder() {
     return /voip|pbx|sip|extension|hosted\s*line|voip\s*line|pbx\s*ext/.test(hay);
   }
 
+  // Helper: identify minute bundle services
+  function isBundleService(service: Service): boolean {
+    const hay = `${service.name} ${(service as any).categoryName ?? ""}`.toLowerCase();
+    return /bundle|minute|minutes|min\s*pack|talk\s*time|talktime|call\s*pack/.test(hay);
+  }
+
   const { data: clients = [] } = useQuery({
     queryKey: ["reseller-clients"],
     queryFn: async () => {
@@ -154,9 +160,11 @@ export default function ResellerNewOrder() {
   const [submitted, setSubmitted] = useState(false);
   const [prefillApplied, setPrefillApplied] = useState(false);
 
-  // Inline DID picker for VoIP/PBX services
+  // Inline DID + bundle picker for VoIP/PBX services
   const [voipDidPanelServiceId, setVoipDidPanelServiceId] = useState<number | null>(null);
   const [voipAreaCodeId, setVoipAreaCodeId] = useState<number | undefined>();
+  const [voipSelectedDidId, setVoipSelectedDidId] = useState<number | null>(null);
+  const [voipBundleServiceId, setVoipBundleServiceId] = useState<number | null>(null);
 
   // Pre-populate cart from ?add=type:id param once catalog data has loaded
   useEffect(() => {
@@ -441,6 +449,8 @@ export default function ResellerNewOrder() {
                                   if (needsDid) {
                                     setVoipDidPanelServiceId(service.id);
                                     setVoipAreaCodeId(undefined);
+                                    setVoipSelectedDidId(null);
+                                    setVoipBundleServiceId(null);
                                   }
                                 }}
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
@@ -453,7 +463,11 @@ export default function ResellerNewOrder() {
                               <button
                                 onClick={() => {
                                   setVoipDidPanelServiceId(panelOpen ? null : service.id);
-                                  if (!panelOpen) setVoipAreaCodeId(undefined);
+                                  if (!panelOpen) {
+                                    setVoipAreaCodeId(undefined);
+                                    setVoipSelectedDidId(null);
+                                    setVoipBundleServiceId(null);
+                                  }
                                 }}
                                 className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${panelOpen ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary hover:bg-primary/20"}`}
                                 title={panelOpen ? "Hide DID picker" : "Assign DID number"}
@@ -465,82 +479,177 @@ export default function ResellerNewOrder() {
                           </div>
                         </div>
 
-                        {/* Inline DID picker panel */}
+                        {/* Inline DID + Bundle picker panel */}
                         <AnimatePresence>
-                          {needsDid && panelOpen && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="overflow-hidden border-t border-primary/20"
-                            >
-                              <div className="p-4 space-y-3 bg-background/50">
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                                  <MapPin className="w-3.5 h-3.5 text-primary" /> Choose a DID number for this service
-                                </p>
+                          {needsDid && panelOpen && (() => {
+                            const bundleServices = (services as Service[]).filter(isBundleService);
+                            const selectedDid = voipSelectedDidId
+                              ? (voipAvailableDids as Did[]).find((d: Did) => d.id === voipSelectedDidId) ?? null
+                              : null;
+                            const selectedBundle = voipBundleServiceId
+                              ? bundleServices.find(s => s.id === voipBundleServiceId) ?? null
+                              : null;
+                            const canConfirm = !!voipSelectedDidId && !!voipBundleServiceId;
+                            return (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="overflow-hidden border-t border-primary/20"
+                              >
+                                <div className="p-4 space-y-4 bg-background/50">
 
-                                {/* Area code dropdown */}
-                                <div className="relative">
-                                  <select
-                                    value={voipAreaCodeId ?? ""}
-                                    onChange={e => setVoipAreaCodeId(e.target.value ? parseInt(e.target.value) : undefined)}
-                                    className="w-full pl-3 pr-8 py-2.5 bg-background border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/50 outline-none appearance-none cursor-pointer"
-                                  >
-                                    <option value="">Select area code…</option>
-                                    {(areaCodes as any[]).map((ac: any) => (
-                                      <option key={ac.id} value={ac.id} disabled={ac.availableCount === 0}>
-                                        {ac.code} — {ac.region}{ac.province ? `, ${ac.province}` : ""} ({ac.availableCount} available)
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                                </div>
-
-                                {/* DID list */}
-                                {!voipAreaCodeId ? (
-                                  <p className="text-xs text-muted-foreground text-center py-4">Select an area code to see available numbers</p>
-                                ) : voipDidsLoading ? (
-                                  <div className="flex items-center justify-center py-6">
-                                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                  {/* Step indicators */}
+                                  <div className="flex items-center gap-2 text-xs font-semibold">
+                                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${voipSelectedDidId ? "bg-emerald-500 text-white" : "bg-primary text-primary-foreground"}`}>
+                                      {voipSelectedDidId ? "✓" : "1"}
+                                    </span>
+                                    <span className={voipSelectedDidId ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}>Choose DID Number</span>
+                                    <div className="flex-1 h-px bg-border/60" />
+                                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${voipBundleServiceId ? "bg-emerald-500 text-white" : voipSelectedDidId ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                                      {voipBundleServiceId ? "✓" : "2"}
+                                    </span>
+                                    <span className={voipBundleServiceId ? "text-emerald-600 dark:text-emerald-400" : voipSelectedDidId ? "text-foreground" : "text-muted-foreground"}>Minute Bundle</span>
                                   </div>
-                                ) : (voipAvailableDids as Did[]).length === 0 ? (
-                                  <p className="text-xs text-muted-foreground text-center py-4">No available DIDs in this area code</p>
-                                ) : (
-                                  <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
-                                    {(voipAvailableDids as Did[]).map((did: Did) => {
-                                      const alreadyInCart = isDidInCart(did.id);
-                                      return (
-                                        <div key={did.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-card border border-border/60 hover:border-primary/30 transition-colors">
-                                          <div className="flex items-center gap-2.5">
-                                            <Phone className="w-3.5 h-3.5 text-primary shrink-0" />
-                                            <div>
-                                              <p className="font-mono font-semibold text-sm tracking-wider">{did.number}</p>
-                                              <p className="text-[10px] text-muted-foreground">{did.areaCode} — {did.region}</p>
-                                            </div>
-                                          </div>
-                                          {alreadyInCart ? (
-                                            <div className="flex items-center gap-1 text-emerald-500 text-xs font-semibold">
-                                              <CheckCircle2 className="w-3.5 h-3.5" /> Added
+
+                                  {/* ── Step 1: DID picker ── */}
+                                  <div className="space-y-2">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                                      <MapPin className="w-3.5 h-3.5 text-primary" /> Select Area Code &amp; DID Number
+                                    </p>
+
+                                    {/* Area code dropdown */}
+                                    <div className="relative">
+                                      <select
+                                        value={voipAreaCodeId ?? ""}
+                                        onChange={e => {
+                                          setVoipAreaCodeId(e.target.value ? parseInt(e.target.value) : undefined);
+                                          setVoipSelectedDidId(null);
+                                        }}
+                                        className="w-full pl-3 pr-8 py-2.5 bg-background border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/50 outline-none appearance-none cursor-pointer"
+                                      >
+                                        <option value="">Select area code…</option>
+                                        {(areaCodes as any[]).map((ac: any) => (
+                                          <option key={ac.id} value={ac.id} disabled={ac.availableCount === 0}>
+                                            {ac.code} — {ac.region}{ac.province ? `, ${ac.province}` : ""} ({ac.availableCount} available)
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                                    </div>
+
+                                    {/* DID list */}
+                                    {!voipAreaCodeId ? (
+                                      <p className="text-xs text-muted-foreground text-center py-3">Select an area code to see available numbers</p>
+                                    ) : voipDidsLoading ? (
+                                      <div className="flex items-center justify-center py-5">
+                                        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                      </div>
+                                    ) : (voipAvailableDids as Did[]).length === 0 ? (
+                                      <p className="text-xs text-muted-foreground text-center py-3">No available DIDs in this area code</p>
+                                    ) : (
+                                      <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                                        {(voipAvailableDids as Did[]).map((did: Did) => {
+                                          const selected = voipSelectedDidId === did.id;
+                                          return (
+                                            <button
+                                              key={did.id}
+                                              onClick={() => setVoipSelectedDidId(selected ? null : did.id)}
+                                              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all text-left ${selected ? "border-primary bg-primary/10 shadow-sm" : "bg-card border-border/60 hover:border-primary/40"}`}
+                                            >
+                                              <div className="flex items-center gap-2.5">
+                                                <Phone className={`w-3.5 h-3.5 shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                                                <div>
+                                                  <p className={`font-mono font-semibold text-sm tracking-wider ${selected ? "text-primary" : "text-foreground"}`}>{did.number}</p>
+                                                  <p className="text-[10px] text-muted-foreground">{did.areaCode} — {did.region}</p>
+                                                </div>
+                                              </div>
+                                              {selected && <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* ── Step 2: Minute Bundle (shown after DID selected) ── */}
+                                  <AnimatePresence>
+                                    {voipSelectedDidId && (
+                                      <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: "auto" }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="overflow-hidden"
+                                      >
+                                        <div className="space-y-2 pt-1 border-t border-border/50">
+                                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 pt-3">
+                                            <Phone className="w-3.5 h-3.5 text-primary" /> Minute Bundle <span className="text-destructive">*</span>
+                                          </p>
+
+                                          {bundleServices.length === 0 ? (
+                                            <div className="px-3 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400">
+                                              No minute bundle services found. Add services with "bundle" or "minutes" in the name or category to the catalog first.
                                             </div>
                                           ) : (
-                                            <button
-                                              onClick={() => {
-                                                addToCart({ referenceId: did.id, itemType: "did", name: `DID ${did.number}`, unitPriceExclVat: 60, unitPriceInclVat: 69, quantity: 1 });
-                                                setVoipDidPanelServiceId(null);
-                                              }}
-                                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
-                                            >
-                                              <Plus className="w-3 h-3" /> Add DID
-                                            </button>
+                                            <div className="relative">
+                                              <select
+                                                value={voipBundleServiceId ?? ""}
+                                                onChange={e => setVoipBundleServiceId(e.target.value ? parseInt(e.target.value) : null)}
+                                                className="w-full pl-3 pr-8 py-2.5 bg-background border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/50 outline-none appearance-none cursor-pointer"
+                                              >
+                                                <option value="">Select a minute bundle…</option>
+                                                {bundleServices.map(b => {
+                                                  const { inclVat } = vatPrices(b as any);
+                                                  return (
+                                                    <option key={b.id} value={b.id}>
+                                                      {b.name}{(b as any).categoryName ? ` — ${(b as any).categoryName}` : ""} · {inclVat > 0 ? `R${inclVat.toFixed(2)}/month incl VAT` : ""}
+                                                    </option>
+                                                  );
+                                                })}
+                                              </select>
+                                              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                                            </div>
                                           )}
                                         </div>
-                                      );
-                                    })}
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+
+                                  {/* ── Confirm button ── */}
+                                  <div className="flex items-center justify-between pt-1 border-t border-border/50">
+                                    <div className="text-xs text-muted-foreground">
+                                      {selectedDid && <span className="font-semibold text-foreground">{selectedDid.number}</span>}
+                                      {selectedDid && selectedBundle && <span className="mx-1">+</span>}
+                                      {selectedBundle && <span className="font-semibold text-foreground">{selectedBundle.name}</span>}
+                                      {!selectedDid && <span>Select DID and bundle to continue</span>}
+                                      {selectedDid && !selectedBundle && <span> — now select a minute bundle</span>}
+                                    </div>
+                                    <button
+                                      disabled={!canConfirm}
+                                      onClick={() => {
+                                        if (!voipSelectedDidId || !voipBundleServiceId) return;
+                                        const did = (voipAvailableDids as Did[]).find((d: Did) => d.id === voipSelectedDidId);
+                                        const bundle = bundleServices.find(s => s.id === voipBundleServiceId);
+                                        if (did) addToCart({ referenceId: did.id, itemType: "did", name: `DID ${did.number}`, unitPriceExclVat: 60, unitPriceInclVat: 69, quantity: 1 });
+                                        if (bundle) {
+                                          const { exclVat: bExcl, inclVat: bIncl } = vatPrices(bundle as any);
+                                          addToCart({ referenceId: bundle.id, itemType: "service", name: bundle.name, unitPriceExclVat: bExcl, unitPriceInclVat: bIncl, quantity: 1 });
+                                        }
+                                        setVoipDidPanelServiceId(null);
+                                        setVoipSelectedDidId(null);
+                                        setVoipBundleServiceId(null);
+                                        setVoipAreaCodeId(undefined);
+                                      }}
+                                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-md shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0 ml-3"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5" /> Add to Order
+                                    </button>
                                   </div>
-                                )}
-                              </div>
-                            </motion.div>
-                          )}
+
+                                </div>
+                              </motion.div>
+                            );
+                          })()}
                         </AnimatePresence>
                       </div>
                     );
