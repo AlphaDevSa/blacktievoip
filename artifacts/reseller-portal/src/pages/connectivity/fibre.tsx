@@ -14,7 +14,7 @@ const FIBRE_SRCDOC = `<!DOCTYPE html>
   ax.id='mainscript';
   ax.type='text/javascript';
   ax.async=true;
-  ax.src='https://rcp.axxess.co.za/public/js/fibremapJs.php?key=AIzaSyCzurWEBCAU4SdsPtuXgvqslSTd558NCO0&width=100%&height=520px';
+  ax.src='https://rcp.axxess.co.za/public/js/fibremapJs.php?key=${import.meta.env.VITE_AXXESS_MAP_KEY}&width=100%&height=520px';
   var s=document.getElementsByTagName('script')[0];
   s.parentNode.insertBefore(ax,s);
 })();
