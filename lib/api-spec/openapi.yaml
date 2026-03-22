@@ -1864,8 +1864,6 @@ components:
           type: string
         province:
           type: string
-        commissionRate:
-          type: number
         status:
           type: string
           enum: [active, suspended, pending]
@@ -1876,7 +1874,7 @@ components:
         createdAt:
           type: string
           format: date-time
-      required: [id, companyName, contactName, email, status, commissionRate, totalClients, monthlyRevenue, createdAt]
+      required: [id, companyName, contactName, email, status, totalClients, monthlyRevenue, createdAt]
 
     CreateResellerRequest:
       type: object
@@ -1905,8 +1903,6 @@ components:
           type: string
         province:
           type: string
-        commissionRate:
-          type: number
       required: [companyName, contactName, email, password]
 
     UpdateResellerRequest:
@@ -1934,8 +1930,6 @@ components:
           type: string
         province:
           type: string
-        commissionRate:
-          type: number
         status:
           type: string
           enum: [active, suspended, pending]
@@ -2092,9 +2086,7 @@ components:
           type: integer
         totalMonthlyRevenue:
           type: number
-        totalCommissionsPaid:
-          type: number
-      required: [totalResellers, activeResellers, totalClients, activeClients, totalMonthlyRevenue, totalCommissionsPaid]
+      required: [totalResellers, activeResellers, totalClients, activeClients, totalMonthlyRevenue]
 
     ResellerStats:
       type: object
@@ -2105,13 +2097,11 @@ components:
           type: integer
         monthlyRevenue:
           type: number
-        commissionEarned:
-          type: number
         totalSipExtensions:
           type: integer
         assignedDids:
           type: integer
-      required: [totalClients, activeClients, monthlyRevenue, commissionEarned, totalSipExtensions, assignedDids]
+      required: [totalClients, activeClients, monthlyRevenue, totalSipExtensions, assignedDids]
 
     Category:
       type: object

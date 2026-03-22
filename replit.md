@@ -61,6 +61,10 @@ Tables: `admins`, `resellers`, `clients`, `services`, `service_categories`, `pro
 - The Vite server on port 5000 also has a proxy for `/api` → port 8080 (for direct Vite access)
 - This dual-proxy ensures the app works correctly regardless of which port the browser hits
 
+## Business Model
+
+Resellers buy from Black Tie VoIP at reseller catalog rates. There is no commission model — the `commission_rate` column still exists in the PostgreSQL `resellers` table but is unused by the application (can be dropped in a future migration).
+
 ## Authentication
 
 Three roles:

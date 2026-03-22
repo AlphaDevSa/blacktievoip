@@ -84,7 +84,6 @@ export const AdminGetResellersResponseItem = zod.object({
   address2: zod.string().optional(),
   city: zod.string().optional(),
   province: zod.string().optional(),
-  commissionRate: zod.number(),
   status: zod.enum(["active", "suspended", "pending"]),
   totalClients: zod.number(),
   monthlyRevenue: zod.number(),
@@ -110,7 +109,6 @@ export const AdminCreateResellerBody = zod.object({
   address2: zod.string().optional(),
   city: zod.string().optional(),
   province: zod.string().optional(),
-  commissionRate: zod.number().optional(),
 });
 
 /**
@@ -133,7 +131,6 @@ export const AdminGetResellerResponse = zod.object({
   address2: zod.string().optional(),
   city: zod.string().optional(),
   province: zod.string().optional(),
-  commissionRate: zod.number(),
   status: zod.enum(["active", "suspended", "pending"]),
   totalClients: zod.number(),
   monthlyRevenue: zod.number(),
@@ -159,7 +156,6 @@ export const AdminUpdateResellerBody = zod.object({
   address2: zod.string().optional(),
   city: zod.string().optional(),
   province: zod.string().optional(),
-  commissionRate: zod.number().optional(),
   status: zod.enum(["active", "suspended", "pending"]).optional(),
 });
 
@@ -176,7 +172,6 @@ export const AdminUpdateResellerResponse = zod.object({
   address2: zod.string().optional(),
   city: zod.string().optional(),
   province: zod.string().optional(),
-  commissionRate: zod.number(),
   status: zod.enum(["active", "suspended", "pending"]),
   totalClients: zod.number(),
   monthlyRevenue: zod.number(),
@@ -204,7 +199,6 @@ export const AdminGetStatsResponse = zod.object({
   totalClients: zod.number(),
   activeClients: zod.number(),
   totalMonthlyRevenue: zod.number(),
-  totalCommissionsPaid: zod.number(),
 });
 
 /**
@@ -1119,7 +1113,6 @@ export const ResellerGetStatsResponse = zod.object({
   totalClients: zod.number(),
   activeClients: zod.number(),
   monthlyRevenue: zod.number(),
-  commissionEarned: zod.number(),
   totalSipExtensions: zod.number(),
   assignedDids: zod.number(),
 });
@@ -1140,7 +1133,6 @@ export const ResellerGetProfileResponse = zod.object({
   address2: zod.string().optional(),
   city: zod.string().optional(),
   province: zod.string().optional(),
-  commissionRate: zod.number(),
   status: zod.enum(["active", "suspended", "pending"]),
   totalClients: zod.number(),
   monthlyRevenue: zod.number(),
@@ -1177,7 +1169,6 @@ export const ResellerUpdateProfileResponse = zod.object({
   address2: zod.string().optional(),
   city: zod.string().optional(),
   province: zod.string().optional(),
-  commissionRate: zod.number(),
   status: zod.enum(["active", "suspended", "pending"]),
   totalClients: zod.number(),
   monthlyRevenue: zod.number(),

@@ -12,8 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -148,7 +146,6 @@ function ApproveDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const [commissionRate, setCommissionRate] = useState("15");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -157,7 +154,7 @@ function ApproveDialog({
       apiFetch(`/api/admin/resellers/${id}/approve`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ commissionRate: Number(commissionRate) }),
+        body: JSON.stringify({}),
       }),
     onSuccess: () => {
       toast({
@@ -202,22 +199,6 @@ function ApproveDialog({
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="commission">Commission Rate (%)</Label>
-            <Input
-              id="commission"
-              type="number"
-              min={0}
-              max={100}
-              step={0.5}
-              value={commissionRate}
-              onChange={(e) => setCommissionRate(e.target.value)}
-              placeholder="15"
-            />
-            <p className="text-xs text-muted-foreground">
-              Default is 15%. This can be changed later in the reseller profile.
-            </p>
-          </div>
         </div>
 
         <DialogFooter>

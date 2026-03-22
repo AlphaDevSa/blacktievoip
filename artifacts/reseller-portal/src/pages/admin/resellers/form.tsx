@@ -22,7 +22,6 @@ export default function AdminCreateReseller() {
   const form = useForm<FormValues>({
     resolver: zodResolver(createResellerSchema),
     defaultValues: {
-      commissionRate: 15,
       province: "",
     }
   });
@@ -92,11 +91,6 @@ export default function AdminCreateReseller() {
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">Phone Number</label>
                   <input {...form.register("phone")} className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/50 outline-none transition-all" placeholder="+27 82 000 0000" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Commission Rate (%) *</label>
-                  <input {...form.register("commissionRate")} type="number" step="0.1" className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/50 outline-none transition-all" />
-                  {form.formState.errors.commissionRate && <p className="text-xs text-destructive">{form.formState.errors.commissionRate.message}</p>}
                 </div>
               </div>
             </div>

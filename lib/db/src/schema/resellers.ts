@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, numeric, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -16,7 +16,6 @@ export const resellersTable = pgTable("resellers", {
   address2: text("address2"),
   city: text("city"),
   province: text("province"),
-  commissionRate: numeric("commission_rate", { precision: 5, scale: 2 }).notNull().default("15"),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

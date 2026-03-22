@@ -91,7 +91,6 @@ router.post("/register", async (req, res) => {
       passwordHash,
       phone: phone || null,
       status: "pending",
-      commissionRate: "15",
     });
 
     return res.json({ success: true, message: "Registration submitted. Your account is pending admin approval." });

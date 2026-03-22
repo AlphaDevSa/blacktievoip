@@ -91,7 +91,6 @@ export interface Reseller {
   address2?: string;
   city?: string;
   province?: string;
-  commissionRate: number;
   status: ResellerStatus;
   totalClients: number;
   monthlyRevenue: number;
@@ -111,7 +110,6 @@ export interface CreateResellerRequest {
   address2?: string;
   city?: string;
   province?: string;
-  commissionRate?: number;
 }
 
 export type UpdateResellerRequestStatus =
@@ -135,7 +133,6 @@ export interface UpdateResellerRequest {
   address2?: string;
   city?: string;
   province?: string;
-  commissionRate?: number;
   status?: UpdateResellerRequestStatus;
 }
 
@@ -233,14 +230,12 @@ export interface AdminStats {
   totalClients: number;
   activeClients: number;
   totalMonthlyRevenue: number;
-  totalCommissionsPaid: number;
 }
 
 export interface ResellerStats {
   totalClients: number;
   activeClients: number;
   monthlyRevenue: number;
-  commissionEarned: number;
   totalSipExtensions: number;
   assignedDids: number;
 }

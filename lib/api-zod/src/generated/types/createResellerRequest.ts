@@ -19,5 +19,4 @@ export interface CreateResellerRequest {
   address2?: string;
   city?: string;
   province?: string;
-  commissionRate?: number;
 }

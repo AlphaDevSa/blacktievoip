@@ -53,7 +53,6 @@ export default function AdminResellerView() {
       address2: (reseller as any).address2 || "",
       city: reseller.city || "",
       province: reseller.province || "",
-      commissionRate: reseller.commissionRate,
       status: reseller.status,
     } : undefined
   });
@@ -171,10 +170,6 @@ export default function AdminResellerView() {
                     <input {...form.register("phone")} className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/50 outline-none" />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Commission Rate (%)</label>
-                    <input {...form.register("commissionRate")} type="number" step="0.1" className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/50 outline-none" />
-                  </div>
-                  <div className="space-y-1.5">
                     <label className="text-sm font-medium">Status</label>
                     <select {...form.register("status")} className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary/50 outline-none">
                       <option value="active">Active</option>
@@ -244,12 +239,6 @@ export default function AdminResellerView() {
                         ].filter(Boolean);
                         return lines.length > 0 ? lines.map((l: string, i: number) => <span key={i} className="block">{l}</span>) : "Not provided";
                       })()}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-muted-foreground mb-1">Commission Rate</dt>
-                    <dd className="text-base font-medium">
-                      <span className="px-2.5 py-1 bg-secondary rounded-md border border-border">{reseller.commissionRate}%</span>
                     </dd>
                   </div>
                 </dl>

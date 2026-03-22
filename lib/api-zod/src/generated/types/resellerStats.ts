@@ -10,7 +10,6 @@ export interface ResellerStats {
   totalClients: number;
   activeClients: number;
   monthlyRevenue: number;
-  commissionEarned: number;
   totalSipExtensions: number;
   assignedDids: number;
 }

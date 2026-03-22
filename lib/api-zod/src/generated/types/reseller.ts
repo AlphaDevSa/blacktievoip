@@ -20,7 +20,6 @@ export interface Reseller {
   address2?: string;
   city?: string;
   province?: string;
-  commissionRate: number;
   status: ResellerStatus;
   totalClients: number;
   monthlyRevenue: number;

@@ -38,21 +38,20 @@ export default function AdminResellers() {
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Clients</th>
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Revenue</th>
-                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Comm.</th>
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
                     <div className="flex justify-center mb-2"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div></div>
                     Loading resellers...
                   </td>
                 </tr>
               ) : resellers?.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
                     No resellers found. Click "Add Reseller" to create one.
                   </td>
                 </tr>
@@ -75,11 +74,6 @@ export default function AdminResellers() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right font-medium text-foreground">
                       {formatZar(reseller.monthlyRevenue)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <span className="inline-flex px-2 py-1 rounded bg-secondary text-xs font-semibold border border-border">
-                        {reseller.commissionRate}%
-                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
                       <Link 

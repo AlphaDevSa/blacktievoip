@@ -32,7 +32,7 @@ async function seed() {
       companyName: "Cape Connect Solutions", contactName: "Thandi Nkosi",
       email: "thandi@capeconnect.co.za", passwordHash: resellerHash,
       phone: "021 555 0100", address: "12 Long Street", city: "Cape Town",
-      province: "Western Cape", commissionRate: "18", status: "active",
+      province: "Western Cape", status: "active",
     })
     .onConflictDoNothing().returning();
 
@@ -42,7 +42,7 @@ async function seed() {
       companyName: "Joburg Telecom", contactName: "Marco van der Berg",
       email: "marco@jouburgtelecom.co.za", passwordHash: resellerHash,
       phone: "011 555 0200", address: "45 Commissioner Street", city: "Johannesburg",
-      province: "Gauteng", commissionRate: "20", status: "active",
+      province: "Gauteng", status: "active",
     })
     .onConflictDoNothing().returning();
 

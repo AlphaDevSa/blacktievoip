@@ -8,7 +8,7 @@ import {
 import { AppLayout } from "@/components/layout/AppLayout";
 import { formatZar } from "@/lib/utils";
 import {
-  Users, PhoneCall, CreditCard, Banknote, ArrowUpRight,
+  Users, PhoneCall, CreditCard, ArrowUpRight,
   Bell, AlertTriangle, CheckCircle2, Info, X, ShoppingCart,
   Clock, Package, Server, Globe, Tag, ChevronRight, Sparkles,
 } from "lucide-react";
@@ -80,15 +80,6 @@ export default function ResellerDashboard() {
       color: "text-purple-400",
       bg: "bg-purple-500/10",
       border: "border-purple-500/20",
-    },
-    {
-      title: "Est. Commission",
-      value: formatZar(stats?.commissionEarned || 0),
-      subValue: "This month's earnings",
-      icon: Banknote,
-      color: "text-amber-400",
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/20",
     },
   ];
 

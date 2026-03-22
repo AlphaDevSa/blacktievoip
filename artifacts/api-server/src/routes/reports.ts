@@ -126,7 +126,6 @@ router.get("/admin/reports/resellers", requireAdmin, async (_req, res) => {
       r.company_name AS "companyName",
       r.contact_name AS "contactName",
       r.email,
-      r.commission_rate AS "commissionRate",
       r.status,
       r.created_at AS "createdAt",
       count(o.id)::int AS "totalOrders",

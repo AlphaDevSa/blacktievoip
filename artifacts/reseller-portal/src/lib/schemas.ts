@@ -31,7 +31,6 @@ export const createResellerSchema = z.object({
   address2: z.string().optional(),
   city: z.string().optional(),
   province: z.string().optional(),
-  commissionRate: z.coerce.number().min(0).max(100).optional().default(15),
 });
 
 export const updateResellerSchema = z.object({
@@ -46,7 +45,6 @@ export const updateResellerSchema = z.object({
   address2: z.string().optional(),
   city: z.string().optional(),
   province: z.string().optional(),
-  commissionRate: z.coerce.number().min(0).max(100).optional(),
   status: z.enum(["active", "suspended", "pending"]).optional(),
 });
 

@@ -19,6 +19,5 @@ export interface UpdateResellerRequest {
   address2?: string;
   city?: string;
   province?: string;
-  commissionRate?: number;
   status?: UpdateResellerRequestStatus;
 }

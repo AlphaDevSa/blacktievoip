@@ -34,14 +34,6 @@ router.get("/stats", async (_req, res) => {
       .from(clientsTable);
 
     const totalRevenue = Number(clientCounts.totalRevenue || 0);
-    
-    // Approximate commissions: each reseller's commission rate applied to their clients' revenue
-    const [commissionData] = await db
-      .select({
-        totalCommissions: sql<number>`coalesce(sum("clients"."monthly_fee"::numeric * "resellers"."commission_rate"::numeric / 100), 0)::float`,
-      })
-      .from(clientsTable)
-      .leftJoin(resellersTable, eq(clientsTable.resellerId, resellersTable.id));
 
     return res.json({
       totalResellers: resellerCounts.total,
@@ -49,7 +41,6 @@ router.get("/stats", async (_req, res) => {
       totalClients: clientCounts.total,
       activeClients: clientCounts.active,
       totalMonthlyRevenue: totalRevenue,
-      totalCommissionsPaid: Number(commissionData?.totalCommissions || 0),
     });
   } catch (err) {
     console.error("Admin stats error:", err);
@@ -87,7 +78,6 @@ router.get("/resellers", async (_req, res) => {
           address2: r.address2,
           city: r.city,
           province: r.province,
-          commissionRate: Number(r.commissionRate),
           status: r.status,
           totalClients: counts.total,
           monthlyRevenue: Number(counts.revenue),
@@ -105,7 +95,7 @@ router.get("/resellers", async (_req, res) => {
 
 router.post("/resellers", async (req, res) => {
   try {
-    const { companyName, contactName, email, password, phone, unitStreetNumber, buildingComplex, streetName, address, address2, city, province, commissionRate } = req.body;
+    const { companyName, contactName, email, password, phone, unitStreetNumber, buildingComplex, streetName, address, address2, city, province } = req.body;
     if (!companyName || !contactName || !email || !password) {
       return res.status(400).json({ error: "Required fields missing" });
     }
@@ -126,7 +116,6 @@ router.post("/resellers", async (req, res) => {
         address2,
         city,
         province,
-        commissionRate: String(commissionRate || 15),
         status: "active",
       })
       .returning();
@@ -144,7 +133,6 @@ router.post("/resellers", async (req, res) => {
       address2: reseller.address2,
       city: reseller.city,
       province: reseller.province,
-      commissionRate: Number(reseller.commissionRate),
       status: reseller.status,
       totalClients: 0,
       monthlyRevenue: 0,
@@ -184,7 +172,6 @@ router.get("/resellers/:id", async (req, res) => {
       address2: reseller.address2,
       city: reseller.city,
       province: reseller.province,
-      commissionRate: Number(reseller.commissionRate),
       status: reseller.status,
       totalClients: counts.total,
       monthlyRevenue: Number(counts.revenue),
@@ -199,7 +186,7 @@ router.get("/resellers/:id", async (req, res) => {
 router.put("/resellers/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { companyName, contactName, email, phone, unitStreetNumber, buildingComplex, streetName, address, address2, city, province, commissionRate, status } = req.body;
+    const { companyName, contactName, email, phone, unitStreetNumber, buildingComplex, streetName, address, address2, city, province, status } = req.body;
 
     const updateData: any = {};
     if (companyName !== undefined) updateData.companyName = companyName;
@@ -213,7 +200,6 @@ router.put("/resellers/:id", async (req, res) => {
     if (address2 !== undefined) updateData.address2 = address2;
     if (city !== undefined) updateData.city = city;
     if (province !== undefined) updateData.province = province;
-    if (commissionRate !== undefined) updateData.commissionRate = String(commissionRate);
     if (status !== undefined) updateData.status = status;
 
     const [reseller] = await db.update(resellersTable).set(updateData).where(eq(resellersTable.id, id)).returning();
@@ -240,7 +226,6 @@ router.put("/resellers/:id", async (req, res) => {
       address2: reseller.address2,
       city: reseller.city,
       province: reseller.province,
-      commissionRate: Number(reseller.commissionRate),
       status: reseller.status,
       totalClients: counts.total,
       monthlyRevenue: Number(counts.revenue),
@@ -305,12 +290,9 @@ router.get("/reseller-applications/count", async (_req, res) => {
 router.patch("/resellers/:id/approve", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { commissionRate } = req.body;
-    const updateData: any = { status: "active" };
-    if (commissionRate !== undefined) updateData.commissionRate = String(commissionRate);
     const [reseller] = await db
       .update(resellersTable)
-      .set(updateData)
+      .set({ status: "active" })
       .where(eq(resellersTable.id, id))
       .returning();
     if (!reseller) return res.status(404).json({ error: "Reseller not found" });

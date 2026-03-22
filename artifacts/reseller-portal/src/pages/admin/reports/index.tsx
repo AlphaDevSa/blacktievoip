@@ -72,7 +72,6 @@ interface ResellerRow {
   companyName: string;
   contactName: string;
   email: string;
-  commissionRate: string;
   status: string;
   createdAt: string;
   totalOrders: number;
@@ -653,13 +652,12 @@ export default function AdminReports() {
                       <TableHead className="text-right">Pending</TableHead>
                       <TableHead className="text-right">Total Revenue</TableHead>
                       <TableHead className="text-right">Completed Revenue</TableHead>
-                      <TableHead className="text-right">Commission Rate</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {(resellers.data ?? []).length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                           No resellers found
                         </TableCell>
                       </TableRow>
@@ -682,7 +680,6 @@ export default function AdminReports() {
                           <TableCell className="text-right text-amber-600">{r.pendingOrders}</TableCell>
                           <TableCell className="text-right font-medium">{formatZAR(r.totalRevenue)}</TableCell>
                           <TableCell className="text-right text-emerald-600 font-medium">{formatZAR(r.completedRevenue)}</TableCell>
-                          <TableCell className="text-right">{Number(r.commissionRate).toFixed(0)}%</TableCell>
                         </TableRow>
                       ))
                     )}

@@ -12,5 +12,4 @@ export interface AdminStats {
   totalClients: number;
   activeClients: number;
   totalMonthlyRevenue: number;
-  totalCommissionsPaid: number;
 }

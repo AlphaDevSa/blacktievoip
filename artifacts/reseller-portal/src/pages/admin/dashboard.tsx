@@ -1,7 +1,7 @@
 import { useAdminGetStats } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { formatZar } from "@/lib/utils";
-import { Building2, Users, CreditCard, PiggyBank, ArrowUpRight } from "lucide-react";
+import { Building2, Users, CreditCard, ArrowUpRight } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function AdminDashboard() {
@@ -45,15 +45,6 @@ export default function AdminDashboard() {
       bg: "bg-purple-500/10",
       border: "border-purple-500/20"
     },
-    {
-      title: "Commissions Paid",
-      value: formatZar(stats?.totalCommissionsPaid || 0),
-      subValue: "Estimated for current month",
-      icon: PiggyBank,
-      color: "text-amber-400",
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/20"
-    }
   ];
 
   return (

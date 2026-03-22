@@ -33,7 +33,6 @@ router.get("/stats", async (req, res) => {
       .where(eq(clientsTable.resellerId, resellerId));
 
     const monthlyRevenue = Number(counts.revenue || 0);
-    const commissionEarned = monthlyRevenue * (Number(reseller.commissionRate) / 100);
 
     const [{ didCount }] = await db
       .select({ didCount: sql<number>`count(*)::int` })
@@ -44,7 +43,6 @@ router.get("/stats", async (req, res) => {
       totalClients: counts.total,
       activeClients: counts.active,
       monthlyRevenue,
-      commissionEarned,
       totalSipExtensions: counts.totalExtensions,
       assignedDids: didCount,
     });
@@ -81,7 +79,6 @@ router.get("/profile", async (req, res) => {
       address2: reseller.address2,
       city: reseller.city,
       province: reseller.province,
-      commissionRate: Number(reseller.commissionRate),
       status: reseller.status,
       totalClients: counts.total,
       monthlyRevenue: Number(counts.revenue),
@@ -135,7 +132,6 @@ router.put("/profile", async (req, res) => {
       address2: reseller.address2,
       city: reseller.city,
       province: reseller.province,
-      commissionRate: Number(reseller.commissionRate),
       status: reseller.status,
       totalClients: counts.total,
       monthlyRevenue: Number(counts.revenue),
