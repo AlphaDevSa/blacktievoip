@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Minus, Trash2, ShoppingCart, Server, Package, Phone, CheckCircle2,
   MapPin, Globe, HardDrive, Mail, Database, Shield, Wifi, Search, X, Loader2, Tag, Calendar, User,
+  ChevronDown,
 } from "lucide-react";
 import { formatZar } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -123,6 +124,12 @@ export default function ResellerNewOrder() {
   const { data: areaCodes = [] } = useResellerGetAreaCodes();
   const createOrder = useCreateOrder();
 
+  // Helper: identify services that need a DID (VoIP line / PBX extension)
+  function isVoipService(service: Service): boolean {
+    const hay = `${service.name} ${(service as any).categoryName ?? ""}`.toLowerCase();
+    return /voip|pbx|sip|extension|hosted\s*line|voip\s*line|pbx\s*ext/.test(hay);
+  }
+
   const { data: clients = [] } = useQuery({
     queryKey: ["reseller-clients"],
     queryFn: async () => {
@@ -146,6 +153,10 @@ export default function ResellerNewOrder() {
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [prefillApplied, setPrefillApplied] = useState(false);
+
+  // Inline DID picker for VoIP/PBX services
+  const [voipDidPanelServiceId, setVoipDidPanelServiceId] = useState<number | null>(null);
+  const [voipAreaCodeId, setVoipAreaCodeId] = useState<number | undefined>();
 
   // Pre-populate cart from ?add=type:id param once catalog data has loaded
   useEffect(() => {
@@ -208,6 +219,12 @@ export default function ResellerNewOrder() {
   const { data: availableDids = [] } = useResellerGetAvailableDids(
     { areaCodeId: selectedAreaCodeId! },
     { query: { enabled: !!selectedAreaCodeId } }
+  );
+
+  // Separate DID fetch for the inline VoIP service DID picker
+  const { data: voipAvailableDids = [], isLoading: voipDidsLoading } = useResellerGetAvailableDids(
+    { areaCodeId: voipAreaCodeId! },
+    { query: { enabled: !!voipAreaCodeId } }
   );
 
   // Find the TLD price for a given domain name
@@ -390,31 +407,141 @@ export default function ResellerNewOrder() {
                   ) : (services as Service[]).map((service: Service) => {
                     const inCart = cartQtyOf(service.id, "service");
                     const { exclVat, inclVat } = vatPrices(service as any);
+                    const needsDid = isVoipService(service);
+                    const panelOpen = voipDidPanelServiceId === service.id;
                     return (
-                      <div key={service.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/10 border border-border/50 hover:border-primary/30 transition-colors">
-                        <div className="flex items-start gap-3 flex-1 min-w-0">
-                          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <Server className="w-4 h-4 text-primary" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-foreground text-sm truncate">{service.name}</p>
-                            {service.categoryName && <p className="text-xs text-muted-foreground">{service.categoryName}</p>}
-                            <p className="text-xs text-primary font-semibold mt-0.5">{formatZar(inclVat)} <span className="text-muted-foreground font-normal">/{service.unit} incl VAT</span></p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                          {inCart > 0 ? (
-                            <div className="flex items-center gap-1">
-                              <button onClick={() => updateQty(service.id, "service", -1)} className="w-7 h-7 rounded-lg bg-black/[0.07] hover:bg-black/[0.08] flex items-center justify-center transition-colors"><Minus className="w-3 h-3" /></button>
-                              <span className="w-6 text-center text-sm font-bold text-foreground">{inCart}</span>
-                              <button onClick={() => updateQty(service.id, "service", 1)} className="w-7 h-7 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary flex items-center justify-center transition-colors"><Plus className="w-3 h-3" /></button>
+                      <div key={service.id} className={`rounded-xl border transition-colors ${panelOpen ? "border-primary/40 bg-primary/5" : "bg-muted/10 border-border/50 hover:border-primary/30"}`}>
+                        <div className="flex items-center justify-between p-4">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              {needsDid ? <Phone className="w-4 h-4 text-primary" /> : <Server className="w-4 h-4 text-primary" />}
                             </div>
-                          ) : (
-                            <button onClick={() => addToCart({ referenceId: service.id, itemType: "service", name: service.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors">
-                              <Plus className="w-3.5 h-3.5" /> Add
-                            </button>
-                          )}
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-semibold text-foreground text-sm truncate">{service.name}</p>
+                                {needsDid && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase tracking-wide">VoIP</span>
+                                )}
+                              </div>
+                              {service.categoryName && <p className="text-xs text-muted-foreground">{service.categoryName}</p>}
+                              <p className="text-xs text-primary font-semibold mt-0.5">{formatZar(inclVat)} <span className="text-muted-foreground font-normal">/{service.unit} incl VAT</span></p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                            {inCart > 0 ? (
+                              <div className="flex items-center gap-1">
+                                <button onClick={() => updateQty(service.id, "service", -1)} className="w-7 h-7 rounded-lg bg-black/[0.07] hover:bg-black/[0.08] flex items-center justify-center transition-colors"><Minus className="w-3 h-3" /></button>
+                                <span className="w-6 text-center text-sm font-bold text-foreground">{inCart}</span>
+                                <button onClick={() => updateQty(service.id, "service", 1)} className="w-7 h-7 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary flex items-center justify-center transition-colors"><Plus className="w-3 h-3" /></button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  addToCart({ referenceId: service.id, itemType: "service", name: service.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 });
+                                  if (needsDid) {
+                                    setVoipDidPanelServiceId(service.id);
+                                    setVoipAreaCodeId(undefined);
+                                  }
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+                              >
+                                <Plus className="w-3.5 h-3.5" /> Add
+                              </button>
+                            )}
+                            {/* Toggle DID picker for VoIP services already in cart */}
+                            {needsDid && inCart > 0 && (
+                              <button
+                                onClick={() => {
+                                  setVoipDidPanelServiceId(panelOpen ? null : service.id);
+                                  if (!panelOpen) setVoipAreaCodeId(undefined);
+                                }}
+                                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${panelOpen ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary hover:bg-primary/20"}`}
+                                title={panelOpen ? "Hide DID picker" : "Assign DID number"}
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                                {panelOpen ? "Close" : "Pick DID"}
+                              </button>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Inline DID picker panel */}
+                        <AnimatePresence>
+                          {needsDid && panelOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden border-t border-primary/20"
+                            >
+                              <div className="p-4 space-y-3 bg-background/50">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                                  <MapPin className="w-3.5 h-3.5 text-primary" /> Choose a DID number for this service
+                                </p>
+
+                                {/* Area code dropdown */}
+                                <div className="relative">
+                                  <select
+                                    value={voipAreaCodeId ?? ""}
+                                    onChange={e => setVoipAreaCodeId(e.target.value ? parseInt(e.target.value) : undefined)}
+                                    className="w-full pl-3 pr-8 py-2.5 bg-background border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/50 outline-none appearance-none cursor-pointer"
+                                  >
+                                    <option value="">Select area code…</option>
+                                    {(areaCodes as any[]).map((ac: any) => (
+                                      <option key={ac.id} value={ac.id} disabled={ac.availableCount === 0}>
+                                        {ac.code} — {ac.region}{ac.province ? `, ${ac.province}` : ""} ({ac.availableCount} available)
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                                </div>
+
+                                {/* DID list */}
+                                {!voipAreaCodeId ? (
+                                  <p className="text-xs text-muted-foreground text-center py-4">Select an area code to see available numbers</p>
+                                ) : voipDidsLoading ? (
+                                  <div className="flex items-center justify-center py-6">
+                                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                  </div>
+                                ) : (voipAvailableDids as Did[]).length === 0 ? (
+                                  <p className="text-xs text-muted-foreground text-center py-4">No available DIDs in this area code</p>
+                                ) : (
+                                  <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                                    {(voipAvailableDids as Did[]).map((did: Did) => {
+                                      const alreadyInCart = isDidInCart(did.id);
+                                      return (
+                                        <div key={did.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-card border border-border/60 hover:border-primary/30 transition-colors">
+                                          <div className="flex items-center gap-2.5">
+                                            <Phone className="w-3.5 h-3.5 text-primary shrink-0" />
+                                            <div>
+                                              <p className="font-mono font-semibold text-sm tracking-wider">{did.number}</p>
+                                              <p className="text-[10px] text-muted-foreground">{did.areaCode} — {did.region}</p>
+                                            </div>
+                                          </div>
+                                          {alreadyInCart ? (
+                                            <div className="flex items-center gap-1 text-emerald-500 text-xs font-semibold">
+                                              <CheckCircle2 className="w-3.5 h-3.5" /> Added
+                                            </div>
+                                          ) : (
+                                            <button
+                                              onClick={() => {
+                                                addToCart({ referenceId: did.id, itemType: "did", name: `DID ${did.number}`, unitPriceExclVat: 60, unitPriceInclVat: 69, quantity: 1 });
+                                                setVoipDidPanelServiceId(null);
+                                              }}
+                                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+                                            >
+                                              <Plus className="w-3 h-3" /> Add DID
+                                            </button>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     );
                   })}
