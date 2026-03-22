@@ -369,12 +369,59 @@ router.patch("/resellers/:id/approve", async (req, res) => {
 router.patch("/resellers/:id/reject", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    const { reason } = req.body;
+
     const [reseller] = await db
       .update(resellersTable)
       .set({ status: "rejected" })
       .where(eq(resellersTable.id, id))
       .returning();
     if (!reseller) return res.status(404).json({ error: "Reseller not found" });
+
+    // Send rejection email if reason provided and SMTP is configured
+    if (reason?.trim()) {
+      const [settings] = await db.select().from(companySettingsTable).limit(1);
+      if (settings) {
+        const host = settings.smtpHost || process.env.SMTP_HOST;
+        const port = parseInt(settings.smtpPort || process.env.SMTP_PORT || "587");
+        const user = settings.smtpUser || process.env.SMTP_USER;
+        const pass = settings.smtpPass || process.env.SMTP_PASS;
+        const from = settings.smtpFrom || settings.smtpUser || process.env.SMTP_FROM || process.env.SMTP_USER;
+        const secure = settings.smtpSecure ?? process.env.SMTP_SECURE === "true";
+        const companyName = settings.companyName || "Black Tie VoIP";
+
+        if (host && user && pass) {
+          const transporter = nodemailer.createTransport({ host, port, secure, auth: { user, pass } });
+          await transporter.sendMail({
+            from: `"${companyName}" <${from}>`,
+            to: reseller.email,
+            subject: `Reseller Application Outcome — ${companyName}`,
+            html: `
+              <div style="font-family:'Segoe UI',Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;">
+                <div style="background:#4BA3E3;border-radius:12px;padding:20px 24px;margin-bottom:24px;text-align:center;">
+                  <h1 style="margin:0;color:#fff;font-size:20px;font-weight:800;">${companyName}</h1>
+                  <p style="margin:4px 0 0;color:rgba(255,255,255,0.85);font-size:13px;">Reseller Portal</p>
+                </div>
+                <h2 style="color:#1e3a5f;font-size:18px;margin:0 0 8px;">Hi ${reseller.contactName},</h2>
+                <p style="color:#555;font-size:14px;margin:0 0 16px;">
+                  Thank you for your interest in becoming a reseller with ${companyName}.
+                  After reviewing your application, we are unfortunately unable to proceed at this time.
+                </p>
+                <div style="background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:16px 20px;margin-bottom:20px;">
+                  <p style="color:#7f1d1d;font-size:13px;font-weight:600;margin:0 0 6px;">Reason for Rejection</p>
+                  <p style="color:#333;font-size:14px;margin:0;white-space:pre-line;">${reason.trim()}</p>
+                </div>
+                <p style="color:#555;font-size:14px;margin:0 0 8px;">
+                  If you have any questions or believe this decision was made in error, please feel free to contact us by replying to this email.
+                </p>
+                <p style="color:#aaa;font-size:11px;margin:24px 0 0;text-align:center;">© ${new Date().getFullYear()} ${companyName}. This is an automated notification.</p>
+              </div>
+            `,
+          });
+        }
+      }
+    }
+
     return res.json({ success: true, reseller: { id: reseller.id, status: reseller.status } });
   } catch (err) {
     console.error("Reject reseller error:", err);

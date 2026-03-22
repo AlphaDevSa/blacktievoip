@@ -446,20 +446,25 @@ function RejectDialog({
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [reason, setReason] = useState("");
 
   const mutation = useMutation({
-    mutationFn: (id: number) =>
+    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
       apiFetch(`/api/admin/resellers/${id}/reject`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
       }),
     onSuccess: () => {
       toast({
         title: "Application Rejected",
-        description: `${app?.companyName}'s application has been rejected.`,
+        description: reason.trim()
+          ? `${app?.companyName}'s application has been rejected and they have been notified by email.`
+          : `${app?.companyName}'s application has been rejected.`,
       });
       queryClient.invalidateQueries({ queryKey: ["reseller-applications"] });
       queryClient.invalidateQueries({ queryKey: ["reseller-applications-count"] });
+      setReason("");
       onClose();
     },
     onError: (err: Error) => {
@@ -467,30 +472,60 @@ function RejectDialog({
     },
   });
 
+  const handleClose = () => {
+    setReason("");
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <XCircle className="w-5 h-5 text-red-500" />
             Reject Application
           </DialogTitle>
           <DialogDescription>
-            Are you sure you want to reject <strong>{app?.companyName}</strong>'s application?
-            They will not be able to log in, and you can review rejected applications in the Rejected tab.
+            Rejecting <strong>{app?.companyName}</strong>'s application will prevent them from logging in.
+            You can optionally provide a reason — if entered, it will be sent to the applicant by email.
           </DialogDescription>
         </DialogHeader>
 
+        <div className="space-y-3 py-1">
+          <div className="bg-muted/40 rounded-lg px-3 py-2 text-sm space-y-0.5">
+            <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Applicant</p>
+            <p className="font-medium">{app?.contactName} &mdash; <span className="text-primary">{app?.email}</span></p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-1.5">
+              Reason for Rejection <span className="text-muted-foreground font-normal text-xs">(optional — sent by email if provided)</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={4}
+              placeholder="e.g. We are unable to approve your application at this time as we are not currently operating in your region. Please feel free to reapply in the future."
+              className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground text-sm focus:ring-2 focus:ring-red-400/50 outline-none resize-none"
+            />
+          </div>
+          {reason.trim() && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <Mail className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+              A rejection email will be sent to <strong>{app?.email}</strong> with this reason. Requires SMTP to be configured.
+            </p>
+          )}
+        </div>
+
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={mutation.isPending}>
+          <Button variant="outline" onClick={handleClose} disabled={mutation.isPending}>
             Cancel
           </Button>
           <Button
             variant="destructive"
-            onClick={() => app && mutation.mutate(app.id)}
+            onClick={() => app && mutation.mutate({ id: app.id, reason })}
             disabled={mutation.isPending}
           >
-            {mutation.isPending ? "Rejecting…" : "Reject Application"}
+            {mutation.isPending ? "Rejecting…" : reason.trim() ? "Reject & Send Email" : "Reject Application"}
           </Button>
         </DialogFooter>
       </DialogContent>
