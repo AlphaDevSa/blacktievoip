@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { 
   useAdminGetAreaCodes, 
@@ -9,13 +9,15 @@ import {
   useAdminUnassignDid,
   useAdminGetResellers,
   useAdminImportDidsFromSheets,
+  useAdminGetCompanySettings,
+  useAdminUpdateCompanySettings,
   AreaCode,
   Did,
   Reseller
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Plus, Phone, MapPin, Link2, Unlink, FileSpreadsheet, CheckCircle2, AlertCircle, ExternalLink, ShoppingCart, User, Search, X, SlidersHorizontal } from "lucide-react";
+import { Plus, Phone, MapPin, Link2, Unlink, FileSpreadsheet, CheckCircle2, AlertCircle, ExternalLink, ShoppingCart, User, Search, X, SlidersHorizontal, Save } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -101,6 +103,43 @@ export default function AdminDidManager() {
   const [importError, setImportError] = useState<string>("");
 
   const importSheets = useAdminImportDidsFromSheets();
+
+  // DID Pricing
+  const { data: companySettings } = useAdminGetCompanySettings();
+  const updateSettings = useAdminUpdateCompanySettings();
+  const [didPriceExcl, setDidPriceExcl] = useState("");
+  const [didPriceIncl, setDidPriceIncl] = useState("");
+  const [priceDirty, setPriceDirty] = useState(false);
+  const [priceSaving, setPriceSaving] = useState(false);
+
+  useEffect(() => {
+    if (companySettings) {
+      const s = companySettings as any;
+      setDidPriceExcl(s.didResellerPriceExclVat != null ? String(s.didResellerPriceExclVat) : "");
+      setDidPriceIncl(s.didResellerPriceInclVat != null ? String(s.didResellerPriceInclVat) : "");
+      setPriceDirty(false);
+    }
+  }, [companySettings]);
+
+  const handleSavePricing = async () => {
+    setPriceSaving(true);
+    try {
+      await updateSettings.mutateAsync({
+        data: {
+          ...(companySettings as any),
+          didResellerPriceExclVat: didPriceExcl === "" ? null : parseFloat(didPriceExcl),
+          didResellerPriceInclVat: didPriceIncl === "" ? null : parseFloat(didPriceIncl),
+        },
+      });
+      toast({ title: "DID pricing saved" });
+      setPriceDirty(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/company-settings"] });
+    } catch {
+      toast({ title: "Error saving DID pricing", variant: "destructive" });
+    } finally {
+      setPriceSaving(false);
+    }
+  };
 
   const createAreaCode = useAdminCreateAreaCode();
   const createDid = useAdminCreateDid();
@@ -220,9 +259,73 @@ export default function AdminDidManager() {
     setIsImportModalOpen(false);
   };
 
+  const inputCls = "w-full px-4 py-2.5 rounded-xl bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/50 outline-none text-sm";
+  const labelCls = "block text-sm font-medium text-muted-foreground mb-1.5";
+
   return (
     <AppLayout role="admin" title="DID Management">
-      
+
+      {/* DID Number Pricing */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden mb-6">
+        <div className="flex items-center gap-3 p-5 border-b border-border bg-primary/5">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Phone className="w-4 h-4 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h2 className="font-semibold text-foreground">DID Number Pricing</h2>
+            <p className="text-xs text-muted-foreground">Monthly reseller rate shown to resellers when ordering DID numbers</p>
+          </div>
+          {priceDirty && (
+            <button
+              onClick={handleSavePricing}
+              disabled={priceSaving}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-primary-foreground shadow-md shadow-primary/25 hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+            >
+              <Save className="w-3.5 h-3.5" />
+              {priceSaving ? "Saving…" : "Save Pricing"}
+            </button>
+          )}
+        </div>
+        <div className="p-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Monthly Price — Excl VAT (R)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={didPriceExcl}
+                onChange={e => {
+                  const excl = parseFloat(e.target.value);
+                  setDidPriceExcl(e.target.value);
+                  if (!isNaN(excl)) setDidPriceIncl((excl * 1.15).toFixed(2));
+                  setPriceDirty(true);
+                }}
+                className={inputCls}
+                placeholder="e.g. 60.00"
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Monthly Price — Incl VAT (R) <span className="text-xs font-normal text-muted-foreground">(auto ↔)</span></label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={didPriceIncl}
+                onChange={e => {
+                  const incl = parseFloat(e.target.value);
+                  setDidPriceIncl(e.target.value);
+                  if (!isNaN(incl)) setDidPriceExcl((incl / 1.15).toFixed(2));
+                  setPriceDirty(true);
+                }}
+                className={inputCls}
+                placeholder="e.g. 69.00"
+              />
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
       {/* DIDs Section */}
       <div className="bg-card border border-border rounded-2xl shadow-lg overflow-hidden flex flex-col mb-8">
         {/* Title bar + action buttons */}
