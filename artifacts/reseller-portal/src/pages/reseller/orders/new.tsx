@@ -412,7 +412,15 @@ export default function ResellerNewOrder() {
                       <Server className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No services available</p>
                     </div>
-                  ) : (services as Service[]).map((service: Service) => {
+                  ) : ([...(services as Service[])].sort((a, b) => {
+                      const rank = (s: Service) => {
+                        const n = s.name.toLowerCase();
+                        if (/single\s*voip\s*line|voip\s*line/.test(n)) return 0;
+                        if (/hosted\s*pbx.*ext|pbx.*ext|pbx\s*extension/.test(n)) return 1;
+                        return 2;
+                      };
+                      return rank(a) - rank(b);
+                    })).map((service: Service) => {
                     const inCart = cartQtyOf(service.id, "service");
                     const { exclVat, inclVat } = vatPrices(service as any);
                     const needsDid = isVoipService(service);
