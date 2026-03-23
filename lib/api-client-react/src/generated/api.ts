@@ -5469,6 +5469,70 @@ export const useAdminImportDidsFromSheets = <
   return useMutation(getAdminImportDidsFromSheetsMutationOptions(options));
 };
 
+// ── DID Sheet Config ──────────────────────────────────────────────────────────
+
+export interface DidSheetConfig {
+  didSheetUrl: string | null;
+  didSheetEnabled: boolean | null;
+  didSheetLastRunAt: string | null;
+  didSheetLastRunResult: string | null;
+}
+
+export const getAdminGetDidSheetConfigUrl = () => `/api/admin/dids/sheet-config`;
+
+export const adminGetDidSheetConfig = async (options?: RequestInit): Promise<DidSheetConfig> => {
+  return customFetch<DidSheetConfig>(getAdminGetDidSheetConfigUrl(), { method: "GET", ...options });
+};
+
+export const getAdminGetDidSheetConfigQueryOptions = <TData = Awaited<ReturnType<typeof adminGetDidSheetConfig>>, TError = ErrorType<unknown>>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof adminGetDidSheetConfig>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = ["adminGetDidSheetConfig"];
+  return { queryKey, queryFn: () => adminGetDidSheetConfig(requestOptions), ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof adminGetDidSheetConfig>>, TError, TData>;
+};
+
+export const useAdminGetDidSheetConfig = <TData = Awaited<ReturnType<typeof adminGetDidSheetConfig>>, TError = ErrorType<unknown>>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof adminGetDidSheetConfig>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } => {
+  const queryOptions = getAdminGetDidSheetConfigQueryOptions(options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  query.queryKey = queryOptions.queryKey;
+  return query;
+};
+
+export interface PatchDidSheetConfigBody {
+  didSheetUrl?: string;
+  didSheetEnabled?: boolean;
+}
+
+export const getAdminPatchDidSheetConfigUrl = () => `/api/admin/dids/sheet-config`;
+
+export const adminPatchDidSheetConfig = async (body: PatchDidSheetConfigBody, options?: RequestInit): Promise<DidSheetConfig> => {
+  return customFetch<DidSheetConfig>(getAdminPatchDidSheetConfigUrl(), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), ...options });
+};
+
+export const getAdminPatchDidSheetConfigMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof adminPatchDidSheetConfig>>, TError, { data: PatchDidSheetConfigBody }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return {
+    mutationKey: ["adminPatchDidSheetConfig"],
+    mutationFn: ({ data }: { data: PatchDidSheetConfigBody }) => adminPatchDidSheetConfig(data, requestOptions),
+    ...mutationOptions,
+  } as UseMutationOptions<Awaited<ReturnType<typeof adminPatchDidSheetConfig>>, TError, { data: PatchDidSheetConfigBody }, TContext>;
+};
+
+export const useAdminPatchDidSheetConfig = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof adminPatchDidSheetConfig>>, TError, { data: PatchDidSheetConfigBody }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<Awaited<ReturnType<typeof adminPatchDidSheetConfig>>, TError, { data: PatchDidSheetConfigBody }, TContext> => {
+  return useMutation(getAdminPatchDidSheetConfigMutationOptions(options));
+};
+
 /**
  * @summary List all orders (admin)
  */

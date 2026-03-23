@@ -53,6 +53,11 @@ export const companySettingsTable = pgTable("company_settings", {
   // DID Pricing (reseller rate)
   didResellerPriceExclVat: text("did_reseller_price_excl_vat"),
   didResellerPriceInclVat: text("did_reseller_price_incl_vat"),
+  // Google Sheets scheduled import
+  didSheetUrl: text("did_sheet_url"),
+  didSheetEnabled: boolean("did_sheet_enabled").default(false),
+  didSheetLastRunAt: timestamp("did_sheet_last_run_at"),
+  didSheetLastRunResult: text("did_sheet_last_run_result"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 

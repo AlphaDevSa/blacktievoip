@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { db } from "@workspace/db";
-import { areaCodesTable, didsTable, resellersTable, clientsTable } from "@workspace/db";
+import { areaCodesTable, didsTable, resellersTable, clientsTable, companySettingsTable } from "@workspace/db";
 import { eq, sql, and, inArray } from "drizzle-orm";
 
 const router: IRouter = Router();
@@ -186,7 +186,7 @@ router.post("/admin/dids", requireAdmin, async (req, res) => {
 
 // ── Google Sheets CSV import ──────────────────────────────────────────────────
 
-function sheetsUrlToCsv(url: string): string {
+export function sheetsUrlToCsv(url: string): string {
   const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
   if (!match) throw new Error("Invalid Google Sheets URL — could not extract sheet ID");
   const id = match[1];
@@ -239,81 +239,127 @@ function detectColumns(headers: string[]): Record<string, number> {
   };
 }
 
-router.post("/admin/dids/import-gsheets", requireAdmin, async (req, res) => {
+// Reusable import function (also called by cron job)
+export async function performGSheetsImport(url: string, dryRun = false): Promise<{
+  ok: boolean; totalRows: number; created?: number; skipped?: number; areaCodesCreated?: number;
+  sample?: object[]; headers?: string[]; error?: string;
+}> {
+  let csvUrl: string;
+  try { csvUrl = sheetsUrlToCsv(url); } catch (e: any) { return { ok: false, totalRows: 0, error: e.message }; }
+
+  let text: string;
   try {
-    const { url, dryRun = false } = req.body as { url: string; dryRun?: boolean };
-    if (!url) return res.status(400).json({ error: "Google Sheets URL is required" });
+    const resp = await fetch(csvUrl);
+    if (!resp.ok) return { ok: false, totalRows: 0, error: `Could not fetch sheet (${resp.status}) — make sure it is publicly shared ("Anyone with the link can view")` };
+    text = await resp.text();
+  } catch {
+    return { ok: false, totalRows: 0, error: "Network error fetching Google Sheet — check the URL and sharing settings" };
+  }
 
-    let csvUrl: string;
-    try { csvUrl = sheetsUrlToCsv(url); } catch (e: any) { return res.status(400).json({ error: e.message }); }
+  const rows = parseSimpleCsv(text);
+  if (rows.length < 2) return { ok: false, totalRows: 0, error: "Sheet appears empty or has only a header row" };
 
-    let text: string;
-    try {
-      const resp = await fetch(csvUrl);
-      if (!resp.ok) return res.status(400).json({ error: `Could not fetch sheet (${resp.status}) — make sure it is publicly shared ("Anyone with the link can view")` });
-      text = await resp.text();
-    } catch {
-      return res.status(400).json({ error: "Network error fetching Google Sheet — check the URL and sharing settings" });
-    }
+  const headers = rows[0];
+  const cols = detectColumns(headers);
+  if (cols.areaCode === -1) return { ok: false, totalRows: 0, error: 'Sheet must have an "area_code" column (aliases: code, prefix)' };
+  if (cols.number === -1)   return { ok: false, totalRows: 0, error: 'Sheet must have a "number" column (aliases: did, phone, telephone)' };
 
-    const rows = parseSimpleCsv(text);
-    if (rows.length < 2) return res.status(400).json({ error: "Sheet appears empty or has only a header row" });
+  const dataRows = rows.slice(1).filter(r => r[cols.areaCode] && r[cols.number]);
+  if (dataRows.length === 0) return { ok: false, totalRows: 0, error: "No valid data rows found" };
 
-    const headers = rows[0];
-    const cols = detectColumns(headers);
-    if (cols.areaCode === -1) return res.status(400).json({ error: 'Sheet must have an "area_code" column (aliases: code, prefix)' });
-    if (cols.number === -1)   return res.status(400).json({ error: 'Sheet must have a "number" column (aliases: did, phone, telephone)' });
-
-    const dataRows = rows.slice(1).filter(r => r[cols.areaCode] && r[cols.number]);
-    if (dataRows.length === 0) return res.status(400).json({ error: "No valid data rows found" });
-
-    // Build preview sample
+  if (dryRun) {
     const sample = dataRows.slice(0, 5).map(r => ({
-      areaCode: r[cols.areaCode],
-      number: r[cols.number],
+      areaCode: r[cols.areaCode], number: r[cols.number],
       region: cols.region >= 0 ? r[cols.region] : undefined,
       province: cols.province >= 0 ? r[cols.province] : undefined,
       notes: cols.notes >= 0 ? r[cols.notes] : undefined,
     }));
+    return { ok: true, totalRows: dataRows.length, sample, headers };
+  }
 
-    if (dryRun) {
-      return res.json({ ok: true, totalRows: dataRows.length, sample, headers: headers });
+  let created = 0, skipped = 0, areaCodesCreated = 0;
+  const areaCodeCache = new Map<string, number>();
+  const existing = await db.select().from(areaCodesTable);
+  for (const ac of existing) areaCodeCache.set(ac.code, ac.id);
+
+  for (const row of dataRows) {
+    const code     = row[cols.areaCode].trim();
+    const number   = row[cols.number].trim();
+    const region   = cols.region   >= 0 ? (row[cols.region]   || "").trim() : "";
+    const province = cols.province >= 0 ? (row[cols.province] || "").trim() : "";
+    const notes    = cols.notes    >= 0 ? (row[cols.notes]    || "").trim() : "";
+    if (!code || !number) continue;
+
+    let areaCodeId = areaCodeCache.get(code);
+    if (!areaCodeId) {
+      const [ac] = await db.insert(areaCodesTable).values({ code, region: region || code, province: province || "Unknown" }).returning();
+      areaCodeId = ac.id;
+      areaCodeCache.set(code, ac.id);
+      areaCodesCreated++;
     }
 
-    // Actual import
-    let created = 0, skipped = 0, areaCodesCreated = 0;
-    const areaCodeCache = new Map<string, number>();
-
-    // Pre-load existing area codes
-    const existing = await db.select().from(areaCodesTable);
-    for (const ac of existing) areaCodeCache.set(ac.code, ac.id);
-
-    for (const row of dataRows) {
-      const code    = row[cols.areaCode].trim();
-      const number  = row[cols.number].trim();
-      const region  = cols.region   >= 0 ? (row[cols.region]   || "").trim() : "";
-      const province = cols.province >= 0 ? (row[cols.province] || "").trim() : "";
-      const notes   = cols.notes    >= 0 ? (row[cols.notes]    || "").trim() : "";
-      if (!code || !number) continue;
-
-      let areaCodeId = areaCodeCache.get(code);
-      if (!areaCodeId) {
-        const [ac] = await db.insert(areaCodesTable).values({ code, region: region || code, province: province || "Unknown" }).returning();
-        areaCodeId = ac.id;
-        areaCodeCache.set(code, ac.id);
-        areaCodesCreated++;
-      }
-
-      try {
-        await db.insert(didsTable).values({ areaCodeId, number, notes: notes || undefined, status: "available" });
-        created++;
-      } catch (e: any) {
-        if (e.code === "23505") skipped++;
-        else throw e;
-      }
+    try {
+      await db.insert(didsTable).values({ areaCodeId, number, notes: notes || undefined, status: "available" });
+      created++;
+    } catch (e: any) {
+      if (e.code === "23505") skipped++;
+      else throw e;
     }
+  }
 
-    return res.json({ ok: true, created, skipped, areaCodesCreated, totalRows: dataRows.length });
+  return { ok: true, created, skipped, areaCodesCreated, totalRows: dataRows.length };
+}
+
+// ── Sheet config: get/save the scheduled import URL ──────────────────────────
+
+router.get("/admin/dids/sheet-config", requireAdmin, async (_req, res) => {
+  try {
+    const [settings] = await db.select({
+      didSheetUrl: companySettingsTable.didSheetUrl,
+      didSheetEnabled: companySettingsTable.didSheetEnabled,
+      didSheetLastRunAt: companySettingsTable.didSheetLastRunAt,
+      didSheetLastRunResult: companySettingsTable.didSheetLastRunResult,
+    }).from(companySettingsTable).limit(1);
+    return res.json(settings ?? { didSheetUrl: null, didSheetEnabled: false, didSheetLastRunAt: null, didSheetLastRunResult: null });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.patch("/admin/dids/sheet-config", requireAdmin, async (req, res) => {
+  try {
+    const { didSheetUrl, didSheetEnabled } = req.body as { didSheetUrl?: string; didSheetEnabled?: boolean };
+    const [settings] = await db.select({ id: companySettingsTable.id }).from(companySettingsTable).limit(1);
+    if (!settings) return res.status(404).json({ error: "Company settings not found" });
+
+    const updates: Record<string, unknown> = {};
+    if (typeof didSheetUrl !== "undefined") updates.didSheetUrl = didSheetUrl || null;
+    if (typeof didSheetEnabled !== "undefined") updates.didSheetEnabled = didSheetEnabled;
+
+    const [updated] = await db.update(companySettingsTable)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(companySettingsTable.id, settings.id))
+      .returning({
+        didSheetUrl: companySettingsTable.didSheetUrl,
+        didSheetEnabled: companySettingsTable.didSheetEnabled,
+        didSheetLastRunAt: companySettingsTable.didSheetLastRunAt,
+        didSheetLastRunResult: companySettingsTable.didSheetLastRunResult,
+      });
+    return res.json(updated);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/admin/dids/import-gsheets", requireAdmin, async (req, res) => {
+  try {
+    const { url, dryRun = false } = req.body as { url: string; dryRun?: boolean };
+    if (!url) return res.status(400).json({ error: "Google Sheets URL is required" });
+    const result = await performGSheetsImport(url, dryRun);
+    if (!result.ok) return res.status(400).json({ error: result.error });
+    return res.json(result);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });

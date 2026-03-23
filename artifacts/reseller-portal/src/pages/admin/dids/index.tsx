@@ -11,13 +11,15 @@ import {
   useAdminImportDidsFromSheets,
   useAdminGetCompanySettings,
   useAdminUpdateCompanySettings,
+  useAdminGetDidSheetConfig,
+  useAdminPatchDidSheetConfig,
   AreaCode,
   Did,
   Reseller
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Plus, Phone, MapPin, Link2, Unlink, FileSpreadsheet, CheckCircle2, AlertCircle, ExternalLink, ShoppingCart, User, Search, X, SlidersHorizontal, Save } from "lucide-react";
+import { Plus, Phone, MapPin, Link2, Unlink, FileSpreadsheet, CheckCircle2, AlertCircle, ExternalLink, ShoppingCart, User, Search, X, SlidersHorizontal, Save, Clock, RefreshCw, ToggleLeft, ToggleRight } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -103,6 +105,59 @@ export default function AdminDidManager() {
   const [importError, setImportError] = useState<string>("");
 
   const importSheets = useAdminImportDidsFromSheets();
+
+  // Scheduled Google Sheets import config
+  const { data: sheetConfig, refetch: refetchSheetConfig } = useAdminGetDidSheetConfig();
+  const patchSheetConfig = useAdminPatchDidSheetConfig();
+  const [savedSheetUrl, setSavedSheetUrl] = useState("");
+  const [sheetEnabled, setSheetEnabled] = useState(false);
+  const [sheetUrlDirty, setSheetUrlDirty] = useState(false);
+  const [sheetSaving, setSheetSaving] = useState(false);
+  const [sheetRunning, setSheetRunning] = useState(false);
+
+  useEffect(() => {
+    if (sheetConfig) {
+      setSavedSheetUrl(sheetConfig.didSheetUrl ?? "");
+      setSheetEnabled(sheetConfig.didSheetEnabled ?? false);
+      setSheetUrlDirty(false);
+    }
+  }, [sheetConfig]);
+
+  const handleSaveSheetConfig = async () => {
+    setSheetSaving(true);
+    try {
+      await patchSheetConfig.mutateAsync({ data: { didSheetUrl: savedSheetUrl, didSheetEnabled: sheetEnabled } });
+      toast({ title: "Scheduled import saved" });
+      setSheetUrlDirty(false);
+      refetchSheetConfig();
+    } catch {
+      toast({ title: "Error saving sheet config", variant: "destructive" });
+    } finally {
+      setSheetSaving(false);
+    }
+  };
+
+  const handleToggleSheetEnabled = async (enabled: boolean) => {
+    setSheetEnabled(enabled);
+    setSheetUrlDirty(true);
+  };
+
+  const handleRunNow = async () => {
+    if (!savedSheetUrl) { toast({ title: "Paste and save a Google Sheets URL first", variant: "destructive" }); return; }
+    setSheetRunning(true);
+    try {
+      const result = await importSheets.mutateAsync({ data: { url: savedSheetUrl, dryRun: false } });
+      const r = result as any;
+      toast({ title: `Import done — created: ${r.created ?? 0}, skipped: ${r.skipped ?? 0}` });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/dids"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/area-codes"] });
+      refetchSheetConfig();
+    } catch (err: any) {
+      toast({ title: err?.data?.error ?? "Import failed", variant: "destructive" });
+    } finally {
+      setSheetRunning(false);
+    }
+  };
 
   // DID Pricing
   const { data: companySettings } = useAdminGetCompanySettings();
@@ -322,6 +377,85 @@ export default function AdminDidManager() {
                 placeholder="e.g. 69.00"
               />
             </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Scheduled Google Sheets Import */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden mb-6">
+        <div className="flex items-center gap-3 p-5 border-b border-border bg-emerald-500/5">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+            <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+          </div>
+          <div className="flex-1">
+            <h2 className="font-semibold text-foreground">Scheduled Google Sheets Import</h2>
+            <p className="text-xs text-muted-foreground">Auto-imports DID numbers from a Google Sheet every 30 minutes</p>
+          </div>
+          {sheetUrlDirty && (
+            <button
+              onClick={handleSaveSheetConfig}
+              disabled={sheetSaving}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-500 text-white shadow-md shadow-emerald-500/25 hover:bg-emerald-400 transition-all disabled:opacity-50"
+            >
+              <Save className="w-3.5 h-3.5" />
+              {sheetSaving ? "Saving…" : "Save"}
+            </button>
+          )}
+        </div>
+        <div className="p-5 space-y-4">
+          {/* URL input */}
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-1.5">Google Sheets URL</label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={savedSheetUrl}
+                onChange={e => { setSavedSheetUrl(e.target.value); setSheetUrlDirty(true); }}
+                placeholder="https://docs.google.com/spreadsheets/d/..."
+                className="flex-1 px-4 py-2.5 rounded-xl bg-background border border-border text-foreground font-mono text-sm focus:ring-2 focus:ring-emerald-500/50 outline-none"
+              />
+              {savedSheetUrl && (
+                <a href={savedSheetUrl} target="_blank" rel="noopener noreferrer"
+                  className="px-3 py-2.5 rounded-xl border border-border text-muted-foreground hover:text-foreground transition-colors"
+                  title="Open sheet">
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              )}
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">Sheet must be shared as <strong className="text-foreground">"Anyone with the link can view"</strong> and have <span className="font-mono">area_code</span> and <span className="font-mono">number</span> columns.</p>
+          </div>
+
+          {/* Enable toggle + Run Now */}
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              onClick={() => handleToggleSheetEnabled(!sheetEnabled)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${sheetEnabled ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/20" : "bg-muted/30 text-muted-foreground border-border hover:bg-muted/50"}`}
+            >
+              {sheetEnabled ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+              {sheetEnabled ? "Auto-import enabled" : "Auto-import disabled"}
+            </button>
+
+            <button
+              onClick={handleRunNow}
+              disabled={sheetRunning || !savedSheetUrl}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-card border border-border text-foreground hover:bg-muted/30 transition-colors disabled:opacity-40"
+            >
+              <RefreshCw className={`w-4 h-4 ${sheetRunning ? "animate-spin" : ""}`} />
+              {sheetRunning ? "Importing…" : "Import Now"}
+            </button>
+
+            {/* Last run status */}
+            {sheetConfig?.didSheetLastRunAt && (
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground ml-auto">
+                <Clock className="w-3.5 h-3.5" />
+                Last run: {format(new Date(sheetConfig.didSheetLastRunAt), "d MMM yyyy, HH:mm")}
+                {sheetConfig.didSheetLastRunResult && (
+                  <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${sheetConfig.didSheetLastRunResult.startsWith("error") ? "bg-red-500/10 text-red-500" : "bg-emerald-500/10 text-emerald-600"}`}>
+                    {sheetConfig.didSheetLastRunResult}
+                  </span>
+                )}
+              </span>
+            )}
           </div>
         </div>
       </motion.div>
