@@ -279,8 +279,15 @@ export async function performGSheetsImport(url: string, dryRun = false): Promise
 
   let created = 0, skipped = 0, areaCodesCreated = 0;
   const areaCodeCache = new Map<string, number>();
-  const existing = await db.select().from(areaCodesTable);
-  for (const ac of existing) areaCodeCache.set(ac.code, ac.id);
+
+  // Pre-load all existing area codes
+  const existingAreaCodes = await db.select().from(areaCodesTable);
+  for (const ac of existingAreaCodes) areaCodeCache.set(ac.code, ac.id);
+
+  // Pre-load all existing DID numbers into a Set for O(1) duplicate checks
+  const existingNumbers = new Set(
+    (await db.select({ number: didsTable.number }).from(didsTable)).map(r => r.number)
+  );
 
   for (const row of dataRows) {
     const code     = row[cols.areaCode].trim();
@@ -290,6 +297,9 @@ export async function performGSheetsImport(url: string, dryRun = false): Promise
     const notes    = cols.notes    >= 0 ? (row[cols.notes]    || "").trim() : "";
     if (!code || !number) continue;
 
+    // Skip if number already exists
+    if (existingNumbers.has(number)) { skipped++; continue; }
+
     let areaCodeId = areaCodeCache.get(code);
     if (!areaCodeId) {
       const [ac] = await db.insert(areaCodesTable).values({ code, region: region || code, province: province || "Unknown" }).returning();
@@ -298,12 +308,17 @@ export async function performGSheetsImport(url: string, dryRun = false): Promise
       areaCodesCreated++;
     }
 
-    try {
-      await db.insert(didsTable).values({ areaCodeId, number, notes: notes || undefined, status: "available" });
+    // Insert with conflict guard as a safety net
+    const inserted = await db.insert(didsTable)
+      .values({ areaCodeId, number, notes: notes || undefined, status: "available" })
+      .onConflictDoNothing()
+      .returning({ id: didsTable.id });
+
+    if (inserted.length > 0) {
+      existingNumbers.add(number); // prevent duplicates within the same sheet
       created++;
-    } catch (e: any) {
-      if (e.code === "23505") skipped++;
-      else throw e;
+    } else {
+      skipped++;
     }
   }
 
