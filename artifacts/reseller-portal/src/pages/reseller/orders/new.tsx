@@ -446,6 +446,15 @@ export default function ResellerNewOrder() {
   const cartQtyOf = (id: number, type: string) => cart.find(c => c.referenceId === id && c.itemType === type)?.quantity ?? 0;
   const isDidInCart = (id: number) => cart.some(c => c.referenceId === id && c.itemType === "did");
 
+  // Mutual-exclusion: single-line services and PBX-extension services can't coexist in the cart
+  const cartHasSingleLine = cart.some(c =>
+    c.itemType === "service" && (services as Service[]).some(s => s.id === c.referenceId && isSingleLineService(s))
+  );
+  const cartHasPbxExt = cart.some(c =>
+    c.itemType === "service" && (services as Service[]).some(s => s.id === c.referenceId && isPbxExtensionService(s))
+  );
+  const didTabRequirementMet = cartHasSingleLine || cartHasPbxExt;
+
   const handleSubmit = async () => {
     if (cart.length === 0) {
       toast({ title: "Add at least one item to place an order", variant: "destructive" });
@@ -615,8 +624,11 @@ export default function ResellerNewOrder() {
                     const needsDid = isVoipService(service) || isSingleLine;
                     const isDidOnly = isSingleLine || isPbxExt; // no bundle step needed
                     const panelOpen = voipDidPanelServiceId === service.id;
+                    // Mutual exclusion: block adding PBX if single-line in cart, or vice versa
+                    const blockedByConflict =
+                      (isSingleLine && cartHasPbxExt) || (isPbxExt && cartHasSingleLine);
                     return (
-                      <div key={service.id} className={`rounded-xl border transition-colors ${panelOpen ? "border-primary/40 bg-primary/5" : "bg-muted/10 border-border/50 hover:border-primary/30"}`}>
+                      <div key={service.id} className={`rounded-xl border transition-colors ${blockedByConflict ? "opacity-40 border-border/30 bg-muted/5 cursor-not-allowed" : panelOpen ? "border-primary/40 bg-primary/5" : "bg-muted/10 border-border/50 hover:border-primary/30"}`}>
                         <div className="flex items-center justify-between p-4">
                           <div className="flex items-start gap-3 flex-1 min-w-0">
                             <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -642,6 +654,13 @@ export default function ResellerNewOrder() {
                                 <button onClick={() => updateQty(service.id, "service", -1)} className="w-7 h-7 rounded-lg bg-black/[0.07] hover:bg-black/[0.08] flex items-center justify-center transition-colors"><Minus className="w-3 h-3" /></button>
                                 <span className="w-6 text-center text-sm font-bold text-foreground">{inCart}</span>
                                 <button onClick={() => updateQty(service.id, "service", 1)} className="w-7 h-7 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary flex items-center justify-center transition-colors"><Plus className="w-3 h-3" /></button>
+                              </div>
+                            ) : blockedByConflict ? (
+                              <div
+                                title={isSingleLine ? "Remove the Hosted PBX Extension from your cart first" : "Remove the Single Line service from your cart first"}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/60 text-muted-foreground text-xs font-semibold cursor-not-allowed select-none"
+                              >
+                                <Lock className="w-3.5 h-3.5" /> Unavailable
                               </div>
                             ) : (
                               <button
@@ -954,62 +973,91 @@ export default function ResellerNewOrder() {
               ) : tab === "dids" ? (
                 /* ── DIDs ── */
                 <motion.div key="dids" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-3">
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/10 border border-border/50">
-                    <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
-                    <select
-                      value={selectedAreaCodeId ?? ""}
-                      onChange={e => setSelectedAreaCodeId(e.target.value ? parseInt(e.target.value) : undefined)}
-                      className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none appearance-none focus:ring-2 focus:ring-primary/50"
-                    >
-                      <option value="">Select an area code…</option>
-                      {(areaCodes as any[]).map((ac: any) => (
-                        <option key={ac.id} value={ac.id}>{ac.code} — {ac.region} ({ac.availableCount} available)</option>
-                      ))}
-                    </select>
-                  </div>
-                  {!selectedAreaCodeId ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-center">
-                      <Phone className="w-10 h-10 text-muted-foreground/20 mb-3" />
-                      <p className="text-muted-foreground text-sm">Select an area code to browse available DIDs</p>
-                    </div>
-                  ) : availableDids.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-center">
-                      <Phone className="w-10 h-10 text-muted-foreground/20 mb-3" />
-                      <p className="text-muted-foreground text-sm">No available DIDs in this area code</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {(availableDids as Did[]).map((did: Did) => {
-                        const inCart = isDidInCart(did.id);
-                        return (
-                          <div key={did.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/10 border border-border/50 hover:border-primary/30 transition-colors">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0"><Phone className="w-4 h-4 text-primary" /></div>
-                              <div>
-                                <p className="font-mono font-semibold text-foreground text-sm tracking-wider">{did.number}</p>
-                                <p className="text-xs text-muted-foreground">{did.areaCode} — {did.region}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                              <div className="text-right mr-1">
-                                <p className="text-xs font-semibold text-primary">{didPriceExcl === 0 ? "Free" : `${formatZar(didPriceExcl)} excl VAT`}</p>
-                                {didPriceExcl > 0 && <p className="text-xs text-muted-foreground">/month</p>}
-                              </div>
-                              {inCart ? (
-                                <button onClick={() => removeFromCart(did.id, "did")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors">
-                                  <Trash2 className="w-3.5 h-3.5" /> Remove
-                                </button>
-                              ) : (
-                                <button onClick={() => addToCart({ referenceId: did.id, itemType: "did", name: `DID ${did.number}`, unitPriceExclVat: didPriceExcl, unitPriceInclVat: didPriceIncl, quantity: 1 })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors">
-                                  <Plus className="w-3.5 h-3.5" /> Add to Order
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+
+                  {/* Gate: require a Single Line or PBX Extension service in cart first */}
+                  {!didTabRequirementMet && (
+                    <div className="flex flex-col items-center gap-4 py-12 text-center px-4">
+                      <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                        <Lock className="w-7 h-7 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground text-sm mb-1">A service is required before selecting a DID number</p>
+                        <p className="text-xs text-muted-foreground max-w-xs">
+                          Add either a <span className="font-semibold text-foreground">Single Line</span> or a <span className="font-semibold text-foreground">Hosted PBX Extension</span> service from the Services tab, then return here to pick your number.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setTab("services")}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-md shadow-primary/20 hover:bg-primary/90 transition-all"
+                      >
+                        <Server className="w-3.5 h-3.5" /> Go to Services
+                      </button>
                     </div>
                   )}
+
+                  {didTabRequirementMet && (() => {
+                    const didList = availableDids as Did[];
+                    return (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/10 border border-border/50">
+                          <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
+                          <select
+                            value={selectedAreaCodeId ?? ""}
+                            onChange={e => setSelectedAreaCodeId(e.target.value ? parseInt(e.target.value) : undefined)}
+                            className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none appearance-none focus:ring-2 focus:ring-primary/50"
+                          >
+                            <option value="">Select an area code…</option>
+                            {(areaCodes as any[]).map((ac: any) => (
+                              <option key={ac.id} value={ac.id}>{ac.code} — {ac.region} ({ac.availableCount} available)</option>
+                            ))}
+                          </select>
+                        </div>
+                        {!selectedAreaCodeId ? (
+                          <div className="flex flex-col items-center justify-center py-16 text-center">
+                            <Phone className="w-10 h-10 text-muted-foreground/20 mb-3" />
+                            <p className="text-muted-foreground text-sm">Select an area code to browse available DIDs</p>
+                          </div>
+                        ) : didList.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-16 text-center">
+                            <Phone className="w-10 h-10 text-muted-foreground/20 mb-3" />
+                            <p className="text-muted-foreground text-sm">No available DIDs in this area code</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {didList.map((did: Did) => {
+                              const inCart = isDidInCart(did.id);
+                              return (
+                                <div key={did.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/10 border border-border/50 hover:border-primary/30 transition-colors">
+                                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0"><Phone className="w-4 h-4 text-primary" /></div>
+                                    <div>
+                                      <p className="font-mono font-semibold text-foreground text-sm tracking-wider">{did.number}</p>
+                                      <p className="text-xs text-muted-foreground">{did.areaCode} — {did.region}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                                    <div className="text-right mr-1">
+                                      <p className="text-xs font-semibold text-primary">{didPriceExcl === 0 ? "Free" : `${formatZar(didPriceExcl)} excl VAT`}</p>
+                                      {didPriceExcl > 0 && <p className="text-xs text-muted-foreground">/month</p>}
+                                    </div>
+                                    {inCart ? (
+                                      <button onClick={() => removeFromCart(did.id, "did")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors">
+                                        <Trash2 className="w-3.5 h-3.5" /> Remove
+                                      </button>
+                                    ) : (
+                                      <button onClick={() => addToCart({ referenceId: did.id, itemType: "did", name: `DID ${did.number}`, unitPriceExclVat: didPriceExcl, unitPriceInclVat: didPriceIncl, quantity: 1 })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors">
+                                        <Plus className="w-3.5 h-3.5" /> Add to Order
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </motion.div>
 
               ) : tab === "hosting" ? (
