@@ -166,10 +166,11 @@ export default function ResellerNewOrder() {
     return /hosted\s*pbx.*ext|pbx\s*ext(ension)?|pbx\s+extension/.test(hay);
   }
 
-  // Helper: identify minute bundle services
+  // Helper: identify minute bundle services.
+  // Must match specific minute/call qualifiers — generic "Bundle" in a product name (e.g. "Business VoIP Bundle") must NOT match.
   function isBundleService(service: Service): boolean {
     const hay = `${service.name} ${(service as any).categoryName ?? ""}`.toLowerCase();
-    return /bundle|minute|minutes|min\s*pack|talk\s*time|talktime|call\s*pack/.test(hay);
+    return /(local|international|extension|minute[s]?|min)\s*(bundle|pack)|min\s*pack|talk\s*time|talktime|call\s*pack/.test(hay);
   }
 
   const { data: clients = [] } = useQuery({
