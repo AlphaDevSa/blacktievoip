@@ -126,7 +126,7 @@ export default function ResellerNewOrder() {
   const searchString = useSearch();
   const { toast } = useToast();
   const FRESH = { query: { staleTime: 0 } } as const;
-  const { data: services = [] } = useGetCatalogServices(FRESH);
+  const { data: services = [], isLoading: servicesLoading } = useGetCatalogServices(FRESH);
   const { data: connectivity = [] } = useGetCatalogConnectivity(FRESH);
   const { data: products = [] } = useGetCatalogProducts(FRESH);
   const { data: hostingPackages = [] } = useGetCatalogHostingPackages(FRESH);
@@ -873,9 +873,13 @@ export default function ResellerNewOrder() {
                                               <Phone className="w-3.5 h-3.5 text-primary" /> Minute Bundle <span className="text-destructive">*</span>
                                             </p>
 
-                                            {bundleServices.length === 0 ? (
+                                            {servicesLoading ? (
+                                              <div className="flex items-center justify-center py-5">
+                                                <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                              </div>
+                                            ) : bundleServices.length === 0 ? (
                                               <div className="px-3 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400">
-                                                No minute bundle services found. Add services with "bundle" or "minutes" in the name or category to the catalog first.
+                                                No minute bundle services found. Add services with "bundle" or "minutes" in the name to the catalog first.
                                               </div>
                                             ) : (
                                               <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
@@ -1808,9 +1812,13 @@ export default function ResellerNewOrder() {
                                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 pt-3">
                                             <Phone className="w-3.5 h-3.5 text-primary" /> Minute Bundle <span className="text-destructive">*</span>
                                           </p>
-                                          {bundleServices.length === 0 ? (
+                                          {servicesLoading ? (
+                                            <div className="flex items-center justify-center py-5">
+                                              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                            </div>
+                                          ) : bundleServices.length === 0 ? (
                                             <div className="px-3 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400">
-                                              No minute bundle services found. Add services with "bundle" or "minutes" in the name or category.
+                                              No minute bundle services found. Add services with "bundle" or "minutes" in the name to the catalog first.
                                             </div>
                                           ) : (
                                             <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
