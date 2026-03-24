@@ -210,7 +210,7 @@ export default function AdminConnectivityCatalog() {
         toast({ title: `"${payload.name}" added` });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/admin/connectivity-items"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/catalog/connectivity"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/connectivity"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] });
       setIsItemModalOpen(false);
     } catch {
       toast({ title: "Failed to save", variant: "destructive" });
@@ -223,7 +223,7 @@ export default function AdminConnectivityCatalog() {
       await delItem.mutateAsync({ id: item.id });
       toast({ title: `"${item.name}" deleted` });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/connectivity-items"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/catalog/connectivity"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/connectivity"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] });
     } catch {
       toast({ title: "Failed to delete", variant: "destructive" });
     }
@@ -268,7 +268,7 @@ export default function AdminConnectivityCatalog() {
         toast({ title: `"${payload.name}" created` });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/admin/connectivity-categories"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/catalog/connectivity"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/connectivity"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] });
       setIsCatModalOpen(false);
     } catch {
       toast({ title: "Failed to save", variant: "destructive" });
@@ -291,7 +291,7 @@ export default function AdminConnectivityCatalog() {
       await delCat.mutateAsync({ id: cat.id });
       toast({ title: `"${cat.name}" deleted` });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/connectivity-categories"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/catalog/connectivity"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/connectivity"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] });
       if (selectedCatId === cat.id) setSelectedCatId(null);
     } catch {
       toast({ title: "Failed to delete", variant: "destructive" });

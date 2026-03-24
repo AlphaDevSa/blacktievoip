@@ -126,7 +126,7 @@ export default function AdminServicesCatalog() {
         toast({ title: `"${payload.name}" created` });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/admin/service-categories"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/catalog/services"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/services"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] });
       setIsCatModalOpen(false);
     } catch { toast({ title: "Failed to save category", variant: "destructive" }); }
   }
@@ -139,7 +139,7 @@ export default function AdminServicesCatalog() {
       await deleteCat.mutateAsync({ id: cat.id });
       toast({ title: `"${cat.name}" deleted` });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/service-categories"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/catalog/services"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/services"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] });
       if (selectedCatId === cat.id) setSelectedCatId(null);
     } catch { toast({ title: "Failed to delete", variant: "destructive" }); }
   }
@@ -192,7 +192,7 @@ export default function AdminServicesCatalog() {
       setEditingService(null);
       setServiceForm({ name: "", description: "", categoryId: "", retailPriceExclVat: "", resellerPriceExclVat: "", resellerPriceInclVat: "", priceInclVat: "", unit: "month", status: "active" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/services"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/catalog/services"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/services"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message.replace(/^HTTP \d+[^:]*:\s*/, "") : "Unknown error";
       toast({ title: editingService ? "Error updating service" : "Error creating service", description: msg, variant: "destructive" });
@@ -205,7 +205,7 @@ export default function AdminServicesCatalog() {
         await deleteService.mutateAsync({ id });
         toast({ title: "Service deleted" });
         queryClient.invalidateQueries({ queryKey: ["/api/admin/services"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/catalog/services"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/services"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message.replace(/^HTTP \d+[^:]*:\s*/, "") : "Unknown error";
         toast({ title: "Error deleting service", description: msg, variant: "destructive" });

@@ -881,7 +881,35 @@ router.get("/catalog/new-items", async (_req, res) => {
       .where(eq(connectivityItemsTable.status, "active"))
       .orderBy(connectivityItemsTable.createdAt);
 
-    const allItems = [...newServices, ...newProducts, ...newHosting, ...newTlds, ...newConnectivity]
+    const newCybersecurity = await db
+      .select({ id: cybersecurityItemsTable.id, name: cybersecurityItemsTable.name, type: sql<string>`'cybersecurity'`, createdAt: cybersecurityItemsTable.createdAt })
+      .from(cybersecurityItemsTable)
+      .where(eq(cybersecurityItemsTable.status, "active"))
+      .orderBy(cybersecurityItemsTable.createdAt);
+
+    const newDataSecurity = await db
+      .select({ id: dataSecurityItemsTable.id, name: dataSecurityItemsTable.name, type: sql<string>`'data-security'`, createdAt: dataSecurityItemsTable.createdAt })
+      .from(dataSecurityItemsTable)
+      .where(eq(dataSecurityItemsTable.status, "active"))
+      .orderBy(dataSecurityItemsTable.createdAt);
+
+    const newWebDev = await db
+      .select({ id: webDevItemsTable.id, name: webDevItemsTable.name, type: sql<string>`'web-development'`, createdAt: webDevItemsTable.createdAt })
+      .from(webDevItemsTable)
+      .where(eq(webDevItemsTable.status, "active"))
+      .orderBy(webDevItemsTable.createdAt);
+
+    const newVoipSolutions = await db
+      .select({ id: voipItemsTable.id, name: voipItemsTable.name, type: sql<string>`'voip-solutions'`, createdAt: voipItemsTable.createdAt })
+      .from(voipItemsTable)
+      .where(eq(voipItemsTable.status, "active"))
+      .orderBy(voipItemsTable.createdAt);
+
+    const allItems = [
+      ...newServices, ...newProducts, ...newHosting, ...newTlds,
+      ...newConnectivity, ...newCybersecurity, ...newDataSecurity,
+      ...newWebDev, ...newVoipSolutions,
+    ]
       .map(i => ({ ...i, createdAt: i.createdAt instanceof Date ? i.createdAt.toISOString() : i.createdAt }))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 20);
@@ -895,6 +923,10 @@ router.get("/catalog/new-items", async (_req, res) => {
       totalHosting: newHosting.length,
       totalDomains: newTlds.length,
       totalConnectivity: newConnectivity.length,
+      totalCybersecurity: newCybersecurity.length,
+      totalDataSecurity: newDataSecurity.length,
+      totalWebDevelopment: newWebDev.length,
+      totalVoipSolutions: newVoipSolutions.length,
     });
   } catch (err) {
     console.error(err);

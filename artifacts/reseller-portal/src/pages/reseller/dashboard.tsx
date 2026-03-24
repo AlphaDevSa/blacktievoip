@@ -9,8 +9,9 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { formatZar } from "@/lib/utils";
 import {
   Users, PhoneCall, CreditCard, ArrowUpRight,
-  Bell, AlertTriangle, CheckCircle2, Info, X, ShoppingCart,
+  Bell, AlertTriangle, CheckCircle2, Info, ShoppingCart,
   Clock, Package, Server, Globe, Tag, ChevronRight, Sparkles, Network,
+  Shield, Lock, Phone,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
@@ -23,24 +24,34 @@ const STATUS_STYLES: Record<string, { label: string; cls: string }> = {
 };
 
 const NOTICE_STYLES: Record<string, { icon: React.ElementType; bg: string; border: string; iconCls: string }> = {
-  info:    { icon: Info,          bg: "bg-blue-50 dark:bg-blue-950/20",    border: "border-blue-200 dark:border-blue-800",    iconCls: "text-blue-500" },
-  warning: { icon: AlertTriangle, bg: "bg-amber-50 dark:bg-amber-950/20",  border: "border-amber-200 dark:border-amber-800",  iconCls: "text-amber-500" },
+  info:    { icon: Info,          bg: "bg-blue-50 dark:bg-blue-950/20",       border: "border-blue-200 dark:border-blue-800",    iconCls: "text-blue-500" },
+  warning: { icon: AlertTriangle, bg: "bg-amber-50 dark:bg-amber-950/20",     border: "border-amber-200 dark:border-amber-800",  iconCls: "text-amber-500" },
   success: { icon: CheckCircle2,  bg: "bg-emerald-50 dark:bg-emerald-950/20", border: "border-emerald-200 dark:border-emerald-800", iconCls: "text-emerald-500" },
-  danger:  { icon: AlertTriangle, bg: "bg-red-50 dark:bg-red-950/20",      border: "border-red-200 dark:border-red-800",      iconCls: "text-red-500" },
+  danger:  { icon: AlertTriangle, bg: "bg-red-50 dark:bg-red-950/20",         border: "border-red-200 dark:border-red-800",      iconCls: "text-red-500" },
 };
 
 const CATALOG_TYPE_ICONS: Record<string, React.ElementType> = {
-  service: Server,
-  product: Package,
-  hosting: Globe,
-  domain:  Tag,
+  service:         Server,
+  product:         Package,
+  hosting:         Globe,
+  domain:          Tag,
+  connectivity:    Network,
+  cybersecurity:   Shield,
+  "data-security": Lock,
+  "web-development": Globe,
+  "voip-solutions":  Phone,
 };
 
 const CATALOG_TYPE_LABELS: Record<string, string> = {
-  service: "Service",
-  product: "Product",
-  hosting: "Web Hosting",
-  domain:  "Domain TLD",
+  service:           "Service",
+  product:           "Product",
+  hosting:           "Web Hosting",
+  domain:            "Domain TLD",
+  connectivity:      "Connectivity",
+  cybersecurity:     "Cybersecurity",
+  "data-security":   "Data Security",
+  "web-development": "Web Development",
+  "voip-solutions":  "VoIP Solution",
 };
 
 export default function ResellerDashboard() {
@@ -48,7 +59,7 @@ export default function ResellerDashboard() {
   const { data: stats, isLoading } = useResellerGetStats();
   const { data: notices = [] } = useGetNotices();
   const { data: orders = [] } = useGetMyOrders();
-  const { data: catalogItems } = useGetCatalogNewItems();
+  const { data: catalogItems } = useGetCatalogNewItems({ query: { refetchInterval: 60_000, staleTime: 0 } });
 
   const recentOrders = (orders as any[]).slice(0, 5);
   const newItems = catalogItems?.recentItems ?? [];
@@ -81,6 +92,18 @@ export default function ResellerDashboard() {
       bg: "bg-purple-500/10",
       border: "border-purple-500/20",
     },
+  ];
+
+  const catalogStats = [
+    { label: "Services",       count: (catalogItems as any)?.totalServices      ?? 0, icon: Server,  cls: "bg-blue-500/10 text-blue-500" },
+    { label: "Connectivity",   count: (catalogItems as any)?.totalConnectivity  ?? 0, icon: Network, cls: "bg-emerald-500/10 text-emerald-500" },
+    { label: "Hardware",       count: (catalogItems as any)?.totalProducts      ?? 0, icon: Package, cls: "bg-amber-500/10 text-amber-500" },
+    { label: "Hosting",        count: (catalogItems as any)?.totalHosting       ?? 0, icon: Globe,   cls: "bg-primary/10 text-primary" },
+    { label: "Domains",        count: (catalogItems as any)?.totalDomains       ?? 0, icon: Tag,     cls: "bg-purple-500/10 text-purple-500" },
+    { label: "Cybersecurity",  count: (catalogItems as any)?.totalCybersecurity ?? 0, icon: Shield,  cls: "bg-red-500/10 text-red-500" },
+    { label: "Data Security",  count: (catalogItems as any)?.totalDataSecurity  ?? 0, icon: Lock,    cls: "bg-violet-500/10 text-violet-500" },
+    { label: "Web Dev",        count: (catalogItems as any)?.totalWebDevelopment?? 0, icon: Globe,   cls: "bg-cyan-500/10 text-cyan-500" },
+    { label: "VoIP Solutions", count: (catalogItems as any)?.totalVoipSolutions ?? 0, icon: Phone,   cls: "bg-indigo-500/10 text-indigo-500" },
   ];
 
   if (isLoading) {
@@ -234,7 +257,7 @@ export default function ResellerDashboard() {
           )}
         </motion.div>
 
-        {/* New Catalog Items */}
+        {/* Available Catalog */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -255,16 +278,10 @@ export default function ResellerDashboard() {
           </div>
 
           <div className="p-4 space-y-1">
-            {/* Totals summary row */}
+            {/* All catalog type counts */}
             {catalogItems && (
-              <div className="grid grid-cols-5 gap-2 mb-4">
-                {[
-                  { label: "VoIP", count: catalogItems.totalServices, icon: Server, cls: "bg-blue-500/10 text-blue-500" },
-                  { label: "Connectivity", count: catalogItems.totalConnectivity ?? 0, icon: Network, cls: "bg-emerald-500/10 text-emerald-500" },
-                  { label: "Hardware", count: catalogItems.totalProducts, icon: Package, cls: "bg-amber-500/10 text-amber-500" },
-                  { label: "Hosting", count: catalogItems.totalHosting, icon: Globe, cls: "bg-primary/10 text-primary" },
-                  { label: "Domains", count: catalogItems.totalDomains, icon: Tag, cls: "bg-purple-500/10 text-purple-500" },
-                ].map(item => (
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {catalogStats.map(item => (
                   <button
                     key={item.label}
                     onClick={() => setLocation("/reseller/catalog")}
@@ -274,7 +291,7 @@ export default function ResellerDashboard() {
                       <item.icon className="w-4 h-4" />
                     </div>
                     <p className="text-lg font-bold text-foreground leading-none">{item.count}</p>
-                    <p className="text-[10px] text-muted-foreground font-medium">{item.label}</p>
+                    <p className="text-[10px] text-muted-foreground font-medium text-center leading-tight">{item.label}</p>
                   </button>
                 ))}
               </div>
@@ -300,7 +317,7 @@ export default function ResellerDashboard() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm text-foreground truncate">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">{CATALOG_TYPE_LABELS[item.type]}</p>
+                        <p className="text-xs text-muted-foreground">{CATALOG_TYPE_LABELS[item.type] ?? item.type}</p>
                       </div>
                       <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-300/30 flex-shrink-0">New</span>
                     </div>
