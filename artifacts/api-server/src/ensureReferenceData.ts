@@ -6,10 +6,6 @@ import {
   resellersTable,
   companySettingsTable,
   areaCodesTable,
-  serviceCategoriesTable,
-  servicesTable,
-  productCategoriesTable,
-  productsTable,
 } from "@workspace/db";
 
 export async function ensureReferenceData() {
@@ -17,8 +13,6 @@ export async function ensureReferenceData() {
   await ensureReseller();
   await ensureCompanySettings();
   await ensureAreaCodes();
-  await ensureServiceCatalog();
-  await ensureProductCatalog();
 }
 
 async function ensureReseller() {
@@ -133,128 +127,3 @@ async function ensureAreaCodes() {
   }
 }
 
-async function ensureServiceCatalog() {
-  const [count] = await db
-    .select({ cnt: sql<number>`count(*)::int` })
-    .from(serviceCategoriesTable);
-
-  if ((count?.cnt ?? 0) > 0) return;
-
-  console.log("[seed] Seeding service catalog...");
-
-  const [scVoip] = await db
-    .insert(serviceCategoriesTable)
-    .values({ name: "VoIP Calling", description: "Voice over IP calling plans and bundles", sortOrder: 1 })
-    .returning();
-
-  const [scHosted] = await db
-    .insert(serviceCategoriesTable)
-    .values({ name: "Hosted PBX", description: "Cloud-hosted PBX services", sortOrder: 2 })
-    .returning();
-
-  const [scConnectivity] = await db
-    .insert(serviceCategoriesTable)
-    .values({ name: "Connectivity", description: "Internet and fibre connectivity services", sortOrder: 3 })
-    .returning();
-
-  const [scSupport] = await db
-    .insert(serviceCategoriesTable)
-    .values({ name: "Support & Maintenance", description: "Professional support services", sortOrder: 4 })
-    .returning();
-
-  if (scVoip) {
-    await db.insert(serviceCategoriesTable).values([
-      { name: "Local Calling", parentId: scVoip.id, sortOrder: 1 },
-      { name: "International Calling", parentId: scVoip.id, sortOrder: 2 },
-    ]);
-
-    await db.insert(servicesTable).values([
-      { categoryId: scVoip.id, name: "Standard VoIP Line", description: "Single VoIP line with local calling included", price: "250", unit: "month", status: "active", sortOrder: 1 },
-      { categoryId: scVoip.id, name: "Business VoIP Bundle (5 lines)", description: "5 VoIP lines with 1000 local minutes", price: "999", unit: "month", status: "active", sortOrder: 2 },
-      { categoryId: scVoip.id, name: "Toll-Free Number", description: "0800 toll-free number rental", price: "350", unit: "month", status: "active", sortOrder: 3 },
-    ]);
-  }
-
-  if (scHosted) {
-    await db.insert(serviceCategoriesTable).values([
-      { name: "Extensions", parentId: scHosted.id, sortOrder: 1 },
-      { name: "IVR & Auto-Attendant", parentId: scHosted.id, sortOrder: 2 },
-    ]);
-
-    await db.insert(servicesTable).values([
-      { categoryId: scHosted.id, name: "Hosted PBX - Starter (10 ext)", description: "Cloud PBX for up to 10 extensions", price: "799", unit: "month", status: "active", sortOrder: 1 },
-      { categoryId: scHosted.id, name: "Hosted PBX - Business (25 ext)", description: "Cloud PBX for up to 25 extensions with call recording", price: "1599", unit: "month", status: "active", sortOrder: 2 },
-      { categoryId: scHosted.id, name: "Hosted PBX - Enterprise (50 ext)", description: "Enterprise cloud PBX with advanced IVR and reporting", price: "2999", unit: "month", status: "active", sortOrder: 3 },
-      { categoryId: scHosted.id, name: "Additional Extension", description: "Add an extra SIP extension to any PBX plan", price: "75", unit: "month", status: "active", sortOrder: 4 },
-    ]);
-  }
-
-  if (scSupport) {
-    await db.insert(servicesTable).values([
-      { categoryId: scSupport.id, name: "Remote Support (1 hour)", description: "Dedicated remote technical support", price: "450", unit: "once-off", status: "active", sortOrder: 1 },
-      { categoryId: scSupport.id, name: "Monthly Managed Support", description: "Ongoing managed support contract", price: "999", unit: "month", status: "active", sortOrder: 2 },
-    ]);
-  }
-
-  console.log("[seed] Service catalog seeded");
-}
-
-async function ensureProductCatalog() {
-  const [count] = await db
-    .select({ cnt: sql<number>`count(*)::int` })
-    .from(productCategoriesTable);
-
-  if ((count?.cnt ?? 0) > 0) return;
-
-  console.log("[seed] Seeding product catalog...");
-
-  const [pcPhones] = await db
-    .insert(productCategoriesTable)
-    .values({ name: "VoIP Phones", description: "IP desk phones and handsets", sortOrder: 1 })
-    .returning();
-
-  const [pcAdapters] = await db
-    .insert(productCategoriesTable)
-    .values({ name: "ATA Adapters", description: "Analogue Telephone Adapters", sortOrder: 2 })
-    .returning();
-
-  await db.insert(productCategoriesTable).values({ name: "Routers & Switches", description: "Network hardware for VoIP deployment", sortOrder: 3 });
-
-  const [pcHeadsets] = await db
-    .insert(productCategoriesTable)
-    .values({ name: "Headsets", description: "Professional headsets for call centres", sortOrder: 4 })
-    .returning();
-
-  await db.insert(productCategoriesTable).values({ name: "Accessories", description: "Cables, stands and accessories", sortOrder: 5 });
-
-  if (pcPhones) {
-    await db.insert(productCategoriesTable).values([
-      { name: "Entry Level", parentId: pcPhones.id, sortOrder: 1 },
-      { name: "Mid-Range", parentId: pcPhones.id, sortOrder: 2 },
-      { name: "Executive", parentId: pcPhones.id, sortOrder: 3 },
-    ]);
-
-    await db.insert(productsTable).values([
-      { categoryId: pcPhones.id, name: "Yealink T31P IP Phone", description: "Entry-level 2-line SIP phone with HD voice", sku: "YEA-T31P", price: "1299", stockCount: 25, status: "active", sortOrder: 1 },
-      { categoryId: pcPhones.id, name: "Grandstream GXP2135", description: "8-line mid-range gigabit IP phone", sku: "GXP-2135", price: "2499", stockCount: 15, status: "active", sortOrder: 2 },
-      { categoryId: pcPhones.id, name: "Yealink T54W IP Phone", description: "Executive 16-line colour display phone with WiFi", sku: "YEA-T54W", price: "3999", stockCount: 10, status: "active", sortOrder: 3 },
-      { categoryId: pcPhones.id, name: "Fanvil X3S IP Phone", description: "2-line entry IP phone", sku: "FAN-X3S", price: "899", stockCount: 30, status: "active", sortOrder: 4 },
-    ]);
-  }
-
-  if (pcAdapters) {
-    await db.insert(productsTable).values([
-      { categoryId: pcAdapters.id, name: "Grandstream HT801 ATA", description: "1-port analogue telephone adapter", sku: "HT801", price: "599", stockCount: 20, status: "active", sortOrder: 1 },
-      { categoryId: pcAdapters.id, name: "Grandstream HT802 ATA", description: "2-port analogue telephone adapter", sku: "HT802", price: "799", stockCount: 18, status: "active", sortOrder: 2 },
-    ]);
-  }
-
-  if (pcHeadsets) {
-    await db.insert(productsTable).values([
-      { categoryId: pcHeadsets.id, name: "Jabra Evolve 20 Headset", description: "Professional USB corded headset", sku: "JAB-E20", price: "1199", stockCount: 12, status: "active", sortOrder: 1 },
-      { categoryId: pcHeadsets.id, name: "Plantronics Voyager Focus", description: "Wireless Bluetooth headset with ANC", sku: "PLT-VF", price: "3499", stockCount: 6, status: "active", sortOrder: 2 },
-    ]);
-  }
-
-  console.log("[seed] Product catalog seeded");
-}
