@@ -5,6 +5,11 @@ import {
   useGetCatalogProducts,
   useGetCatalogHostingPackages,
   useGetCatalogDomainTlds,
+  useGetCatalogConnectivity,
+  useGetCatalogCybersecurity,
+  useGetCatalogDataSecurity,
+  useGetCatalogWebDevelopment,
+  useGetCatalogVoipSolutions,
   useResellerGetAreaCodes,
   useResellerGetAvailableDids,
   useResellerCheckDomain,
@@ -14,12 +19,13 @@ import {
   Did,
   HostingPackage,
   DomainTld,
+  ConnectivityItem,
 } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Minus, Trash2, ShoppingCart, Server, Package, Phone, CheckCircle2,
   MapPin, Globe, HardDrive, Mail, Database, Shield, Wifi, Search, X, Loader2, Tag, Calendar, User,
-  ChevronDown,
+  ChevronDown, Network, Lock, Code,
 } from "lucide-react";
 import { formatZar } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -28,7 +34,7 @@ import { useQuery } from "@tanstack/react-query";
 
 interface CartItem {
   referenceId: number;
-  itemType: "service" | "product" | "did" | "hosting" | "domain";
+  itemType: "service" | "product" | "did" | "hosting" | "domain" | "connectivity" | "cybersecurity" | "data-security" | "web-development" | "voip-solutions";
   name: string;
   sku?: string;
   unitPriceExclVat: number;
@@ -36,7 +42,7 @@ interface CartItem {
   quantity: number;
 }
 
-type OrderTab = "services" | "products" | "dids" | "hosting" | "domains";
+type OrderTab = "services" | "connectivity" | "products" | "dids" | "hosting" | "domains" | "cybersecurity" | "data-security" | "web-development" | "voip-solutions";
 
 function vatPrices(item: {
   price?: number | null;
@@ -119,10 +125,16 @@ export default function ResellerNewOrder() {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const { toast } = useToast();
-  const { data: services = [] } = useGetCatalogServices();
-  const { data: products = [] } = useGetCatalogProducts();
-  const { data: hostingPackages = [] } = useGetCatalogHostingPackages();
-  const { data: domainTlds = [] } = useGetCatalogDomainTlds();
+  const FRESH = { query: { staleTime: 0 } } as const;
+  const { data: services = [] } = useGetCatalogServices(FRESH);
+  const { data: connectivity = [] } = useGetCatalogConnectivity(FRESH);
+  const { data: products = [] } = useGetCatalogProducts(FRESH);
+  const { data: hostingPackages = [] } = useGetCatalogHostingPackages(FRESH);
+  const { data: domainTlds = [] } = useGetCatalogDomainTlds(FRESH);
+  const { data: cybersecurity = [] } = useGetCatalogCybersecurity(FRESH);
+  const { data: dataSecurity = [] } = useGetCatalogDataSecurity(FRESH);
+  const { data: webDevelopment = [] } = useGetCatalogWebDevelopment(FRESH);
+  const { data: voipSolutions = [] } = useGetCatalogVoipSolutions(FRESH);
   const { data: areaCodes = [] } = useResellerGetAreaCodes();
   const { data: didPricing } = useQuery({
     queryKey: ["reseller-did-pricing"],
@@ -161,7 +173,7 @@ export default function ResellerNewOrder() {
   const prefillTab = params.get("tab") as OrderTab | null;
 
   const [tab, setTab] = useState<OrderTab>(
-    prefillTab && ["services","products","dids","hosting","domains"].includes(prefillTab)
+    prefillTab && ["services","connectivity","products","dids","hosting","domains","cybersecurity","data-security","web-development","voip-solutions"].includes(prefillTab)
       ? prefillTab
       : "services"
   );
@@ -402,10 +414,15 @@ export default function ResellerNewOrder() {
           <div className="p-3 border-b border-border/50 flex items-center gap-2 bg-muted/20 flex-wrap">
             {([
               { id: "services", label: "Services", icon: Server, count: services.length },
+              { id: "connectivity", label: "Connectivity", icon: Network, count: connectivity.length },
               { id: "products", label: "Products", icon: Package, count: products.length },
               { id: "dids", label: "DID Numbers", icon: Phone, count: areaCodes.reduce((s: number, ac: any) => s + (ac.availableCount ?? 0), 0) },
               { id: "hosting", label: "Web Hosting", icon: Globe, count: hostingPackages.length },
               { id: "domains", label: "Domains", icon: Tag, count: domainTlds.length },
+              { id: "cybersecurity", label: "Cybersecurity", icon: Shield, count: cybersecurity.length },
+              { id: "data-security", label: "Data Security", icon: Lock, count: dataSecurity.length },
+              { id: "web-development", label: "Web Dev", icon: Code, count: webDevelopment.length },
+              { id: "voip-solutions", label: "VoIP Solutions", icon: Wifi, count: voipSolutions.length },
             ] as { id: OrderTab; label: string; icon: React.ElementType; count: number }[]).map(t => (
               <button
                 key={t.id}
@@ -683,6 +700,45 @@ export default function ResellerNewOrder() {
                   })}
                 </motion.div>
 
+              ) : tab === "connectivity" ? (
+                /* ── Connectivity ── */
+                <motion.div key="connectivity" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-2">
+                  {connectivity.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <Network className="w-10 h-10 text-muted-foreground/20 mb-3" />
+                      <p className="text-muted-foreground text-sm">No connectivity packages available</p>
+                    </div>
+                  ) : (connectivity as ConnectivityItem[]).map((item: ConnectivityItem) => {
+                    const inCart = cartQtyOf(item.id, "connectivity");
+                    const { exclVat, inclVat } = vatPrices(item as any);
+                    return (
+                      <div key={item.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/10 border border-border/50 hover:border-primary/30 transition-colors">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5"><Network className="w-4 h-4 text-primary" /></div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-foreground text-sm truncate">{item.name}</p>
+                            {(item as any).categoryName && <p className="text-xs text-muted-foreground">{(item as any).categoryName}</p>}
+                            <p className="text-xs text-primary font-semibold mt-0.5">{formatZar(inclVat)} <span className="text-muted-foreground font-normal">incl VAT</span></p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                          {inCart > 0 ? (
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => updateQty(item.id, "connectivity", -1)} className="w-7 h-7 rounded-lg bg-black/[0.07] hover:bg-black/[0.08] flex items-center justify-center transition-colors"><Minus className="w-3 h-3" /></button>
+                              <span className="w-6 text-center text-sm font-bold text-foreground">{inCart}</span>
+                              <button onClick={() => updateQty(item.id, "connectivity", 1)} className="w-7 h-7 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary flex items-center justify-center transition-colors"><Plus className="w-3 h-3" /></button>
+                            </div>
+                          ) : (
+                            <button onClick={() => addToCart({ referenceId: item.id, itemType: "connectivity", name: item.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors">
+                              <Plus className="w-3.5 h-3.5" /> Add
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </motion.div>
+
               ) : tab === "products" ? (
                 /* ── Products ── */
                 <motion.div key="products" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-2">
@@ -834,7 +890,7 @@ export default function ResellerNewOrder() {
                   })}
                 </motion.div>
 
-              ) : (
+              ) : tab === "domains" ? (
                 /* ── Domains ── */
                 <motion.div key="domains" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-5">
 
@@ -969,7 +1025,164 @@ export default function ResellerNewOrder() {
                     </div>
                   )}
                 </motion.div>
-              )}
+
+              ) : tab === "cybersecurity" ? (
+                /* ── Cybersecurity ── */
+                <motion.div key="cybersecurity" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-2">
+                  {cybersecurity.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <Shield className="w-10 h-10 text-muted-foreground/20 mb-3" />
+                      <p className="text-muted-foreground text-sm">No cybersecurity products available</p>
+                    </div>
+                  ) : (cybersecurity as any[]).map((item: any) => {
+                    const inCart = cartQtyOf(item.id, "cybersecurity");
+                    const { exclVat, inclVat } = vatPrices(item);
+                    return (
+                      <div key={item.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/10 border border-border/50 hover:border-primary/30 transition-colors">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5"><Shield className="w-4 h-4 text-primary" /></div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-foreground text-sm truncate">{item.name}</p>
+                            {item.categoryName && <p className="text-xs text-muted-foreground">{item.categoryName}</p>}
+                            <p className="text-xs text-primary font-semibold mt-0.5">{formatZar(inclVat)} <span className="text-muted-foreground font-normal">incl VAT</span></p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                          {inCart > 0 ? (
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => updateQty(item.id, "cybersecurity", -1)} className="w-7 h-7 rounded-lg bg-black/[0.07] hover:bg-black/[0.08] flex items-center justify-center transition-colors"><Minus className="w-3 h-3" /></button>
+                              <span className="w-6 text-center text-sm font-bold text-foreground">{inCart}</span>
+                              <button onClick={() => updateQty(item.id, "cybersecurity", 1)} className="w-7 h-7 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary flex items-center justify-center transition-colors"><Plus className="w-3 h-3" /></button>
+                            </div>
+                          ) : (
+                            <button onClick={() => addToCart({ referenceId: item.id, itemType: "cybersecurity", name: item.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors">
+                              <Plus className="w-3.5 h-3.5" /> Add
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </motion.div>
+
+              ) : tab === "data-security" ? (
+                /* ── Data Security ── */
+                <motion.div key="data-security" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-2">
+                  {dataSecurity.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <Lock className="w-10 h-10 text-muted-foreground/20 mb-3" />
+                      <p className="text-muted-foreground text-sm">No data security products available</p>
+                    </div>
+                  ) : (dataSecurity as any[]).map((item: any) => {
+                    const inCart = cartQtyOf(item.id, "data-security");
+                    const { exclVat, inclVat } = vatPrices(item);
+                    return (
+                      <div key={item.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/10 border border-border/50 hover:border-primary/30 transition-colors">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5"><Lock className="w-4 h-4 text-primary" /></div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-foreground text-sm truncate">{item.name}</p>
+                            {item.categoryName && <p className="text-xs text-muted-foreground">{item.categoryName}</p>}
+                            <p className="text-xs text-primary font-semibold mt-0.5">{formatZar(inclVat)} <span className="text-muted-foreground font-normal">incl VAT</span></p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                          {inCart > 0 ? (
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => updateQty(item.id, "data-security", -1)} className="w-7 h-7 rounded-lg bg-black/[0.07] hover:bg-black/[0.08] flex items-center justify-center transition-colors"><Minus className="w-3 h-3" /></button>
+                              <span className="w-6 text-center text-sm font-bold text-foreground">{inCart}</span>
+                              <button onClick={() => updateQty(item.id, "data-security", 1)} className="w-7 h-7 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary flex items-center justify-center transition-colors"><Plus className="w-3 h-3" /></button>
+                            </div>
+                          ) : (
+                            <button onClick={() => addToCart({ referenceId: item.id, itemType: "data-security", name: item.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors">
+                              <Plus className="w-3.5 h-3.5" /> Add
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </motion.div>
+
+              ) : tab === "web-development" ? (
+                /* ── Web Development ── */
+                <motion.div key="web-development" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-2">
+                  {webDevelopment.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <Code className="w-10 h-10 text-muted-foreground/20 mb-3" />
+                      <p className="text-muted-foreground text-sm">No web development services available</p>
+                    </div>
+                  ) : (webDevelopment as any[]).map((item: any) => {
+                    const inCart = cartQtyOf(item.id, "web-development");
+                    const { exclVat, inclVat } = vatPrices(item);
+                    return (
+                      <div key={item.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/10 border border-border/50 hover:border-primary/30 transition-colors">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5"><Code className="w-4 h-4 text-primary" /></div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-foreground text-sm truncate">{item.name}</p>
+                            {item.categoryName && <p className="text-xs text-muted-foreground">{item.categoryName}</p>}
+                            <p className="text-xs text-primary font-semibold mt-0.5">{formatZar(inclVat)} <span className="text-muted-foreground font-normal">incl VAT</span></p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                          {inCart > 0 ? (
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => updateQty(item.id, "web-development", -1)} className="w-7 h-7 rounded-lg bg-black/[0.07] hover:bg-black/[0.08] flex items-center justify-center transition-colors"><Minus className="w-3 h-3" /></button>
+                              <span className="w-6 text-center text-sm font-bold text-foreground">{inCart}</span>
+                              <button onClick={() => updateQty(item.id, "web-development", 1)} className="w-7 h-7 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary flex items-center justify-center transition-colors"><Plus className="w-3 h-3" /></button>
+                            </div>
+                          ) : (
+                            <button onClick={() => addToCart({ referenceId: item.id, itemType: "web-development", name: item.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors">
+                              <Plus className="w-3.5 h-3.5" /> Add
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </motion.div>
+
+              ) : tab === "voip-solutions" ? (
+                /* ── VoIP Solutions ── */
+                <motion.div key="voip-solutions" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-2">
+                  {voipSolutions.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <Wifi className="w-10 h-10 text-muted-foreground/20 mb-3" />
+                      <p className="text-muted-foreground text-sm">No VoIP solutions available</p>
+                    </div>
+                  ) : (voipSolutions as any[]).map((item: any) => {
+                    const inCart = cartQtyOf(item.id, "voip-solutions");
+                    const { exclVat, inclVat } = vatPrices(item);
+                    return (
+                      <div key={item.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/10 border border-border/50 hover:border-primary/30 transition-colors">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5"><Wifi className="w-4 h-4 text-primary" /></div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-foreground text-sm truncate">{item.name}</p>
+                            {item.categoryName && <p className="text-xs text-muted-foreground">{item.categoryName}</p>}
+                            <p className="text-xs text-primary font-semibold mt-0.5">{formatZar(inclVat)} <span className="text-muted-foreground font-normal">incl VAT</span></p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                          {inCart > 0 ? (
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => updateQty(item.id, "voip-solutions", -1)} className="w-7 h-7 rounded-lg bg-black/[0.07] hover:bg-black/[0.08] flex items-center justify-center transition-colors"><Minus className="w-3 h-3" /></button>
+                              <span className="w-6 text-center text-sm font-bold text-foreground">{inCart}</span>
+                              <button onClick={() => updateQty(item.id, "voip-solutions", 1)} className="w-7 h-7 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary flex items-center justify-center transition-colors"><Plus className="w-3 h-3" /></button>
+                            </div>
+                          ) : (
+                            <button onClick={() => addToCart({ referenceId: item.id, itemType: "voip-solutions", name: item.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors">
+                              <Plus className="w-3.5 h-3.5" /> Add
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </motion.div>
+
+              ) : null}
             </AnimatePresence>
           </div>
         </div>
