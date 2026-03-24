@@ -561,7 +561,7 @@ export default function ResellerNewOrder() {
                       <Server className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No services available</p>
                     </div>
-                  ) : filteredServices.length === 0 ? noMatchState
+                  ) : filteredServices.length === 0 ? (noMatchState)
                   : filteredServices.map((service: Service) => {
                     const inCart = cartQtyOf(service.id, "service");
                     const { exclVat, inclVat } = vatPrices(service as any);
@@ -815,7 +815,7 @@ export default function ResellerNewOrder() {
                       <Network className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No connectivity packages available</p>
                     </div>
-                  ) : filteredConnectivity.length === 0 ? noMatchState
+                  ) : filteredConnectivity.length === 0 ? (noMatchState)
                   : filteredConnectivity.map((item: ConnectivityItem) => {
                     const inCart = cartQtyOf(item.id, "connectivity");
                     const { exclVat, inclVat } = vatPrices(item as any);
@@ -855,7 +855,7 @@ export default function ResellerNewOrder() {
                       <Package className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No products available</p>
                     </div>
-                  ) : filteredProducts.length === 0 ? noMatchState
+                  ) : filteredProducts.length === 0 ? (noMatchState)
                   : filteredProducts.map((product: Product) => {
                     const inCart = cartQtyOf(product.id, "product");
                     const { exclVat, inclVat } = vatPrices(product as any);
@@ -959,7 +959,7 @@ export default function ResellerNewOrder() {
                       <Globe className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No hosting packages available</p>
                     </div>
-                  ) : filteredHosting.length === 0 ? noMatchState
+                  ) : filteredHosting.length === 0 ? (noMatchState)
                   : filteredHosting.map((pkg: HostingPackage) => {
                     const inCart = cartQtyOf(pkg.id, "hosting");
                     const { exclVat, inclVat } = vatPrices(pkg as any);
@@ -1144,7 +1144,7 @@ export default function ResellerNewOrder() {
                       <Shield className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No cybersecurity products available</p>
                     </div>
-                  ) : filteredCybersecurity.length === 0 ? noMatchState
+                  ) : filteredCybersecurity.length === 0 ? (noMatchState)
                   : filteredCybersecurity.map((item: any) => {
                     const inCart = cartQtyOf(item.id, "cybersecurity");
                     const { exclVat, inclVat } = vatPrices(item);
@@ -1184,7 +1184,7 @@ export default function ResellerNewOrder() {
                       <Lock className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No data security products available</p>
                     </div>
-                  ) : filteredDataSecurity.length === 0 ? noMatchState
+                  ) : filteredDataSecurity.length === 0 ? (noMatchState)
                   : filteredDataSecurity.map((item: any) => {
                     const inCart = cartQtyOf(item.id, "data-security");
                     const { exclVat, inclVat } = vatPrices(item);
@@ -1224,7 +1224,7 @@ export default function ResellerNewOrder() {
                       <Code className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No web development services available</p>
                     </div>
-                  ) : filteredWebDevelopment.length === 0 ? noMatchState
+                  ) : filteredWebDevelopment.length === 0 ? (noMatchState)
                   : filteredWebDevelopment.map((item: any) => {
                     const inCart = cartQtyOf(item.id, "web-development");
                     const { exclVat, inclVat } = vatPrices(item);
@@ -1264,7 +1264,7 @@ export default function ResellerNewOrder() {
                       <Wifi className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No VoIP solutions available</p>
                     </div>
-                  ) : filteredVoipSolutions.length === 0 ? noMatchState
+                  ) : filteredVoipSolutions.length === 0 ? (noMatchState)
                   : filteredVoipSolutions.map((item: any) => {
                     const inCart = cartQtyOf(item.id, "voip-solutions");
                     const { exclVat, inclVat } = vatPrices(item);
