@@ -88,6 +88,7 @@ export function Sidebar({ role }: SidebarProps) {
     { type: "link", href: "/reseller/dids", label: "My DIDs", icon: PhoneCall },
     { type: "link", href: "/reseller/request-did", label: "Request DID", icon: PhoneCall },
     { type: "link", href: "/reseller/catalog", label: "Catalog", icon: Store },
+    { type: "link", href: "/reseller/orders/new", label: "New Order", icon: ShoppingCart },
     { type: "section", label: "Connectivity" },
     { type: "link", href: "/reseller/connectivity/fibre", label: "Fibre Coverage", icon: Cable },
     { type: "link", href: "/reseller/connectivity/telkom-lte", label: "Telkom LTE", icon: SignalHigh },
