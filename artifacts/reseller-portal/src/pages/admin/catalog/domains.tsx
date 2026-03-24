@@ -110,7 +110,7 @@ export default function AdminDomainsCatalog() {
         toast({ title: "TLD added" });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/admin/domain-tlds"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/catalog/domains"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/domain-tlds"] });
       setIsModalOpen(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message.replace(/^HTTP \d+[^:]*:\s*/, "") : "Unknown error";
@@ -123,7 +123,7 @@ export default function AdminDomainsCatalog() {
     try {
       await deleteTld.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/domain-tlds"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/catalog/domains"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/domain-tlds"] });
       toast({ title: "TLD removed" });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message.replace(/^HTTP \d+[^:]*:\s*/, "") : "Unknown error";

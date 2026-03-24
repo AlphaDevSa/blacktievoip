@@ -139,7 +139,7 @@ export default function AdminWebHostingCatalog() {
         toast({ title: "Package created" });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/admin/hosting-packages"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/catalog/hosting"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/hosting-packages"] });
       setIsModalOpen(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message.replace(/^HTTP \d+[^:]*:\s*/, "") : "Unknown error";
@@ -152,7 +152,7 @@ export default function AdminWebHostingCatalog() {
     try {
       await deletePkg.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/hosting-packages"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/catalog/hosting"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/hosting-packages"] });
       toast({ title: "Package deleted" });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message.replace(/^HTTP \d+[^:]*:\s*/, "") : "Unknown error";

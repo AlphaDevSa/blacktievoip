@@ -62,15 +62,16 @@ export default function ResellerCatalog() {
     setLocation(`/reseller/orders/new?add=domain:${tldId}&tab=domains`);
   }
 
-  const { data: services = [], isLoading: loadingS } = useGetCatalogServices();
-  const { data: products = [], isLoading: loadingP } = useGetCatalogProducts();
-  const { data: hostingPackages = [], isLoading: loadingH } = useGetCatalogHostingPackages();
-  const { data: domainTlds = [], isLoading: loadingD } = useGetCatalogDomainTlds();
-  const { data: connectivityItems = [], isLoading: loadingC } = useGetCatalogConnectivity();
-  const { data: cybersecurityItems = [], isLoading: loadingCyber } = useGetCatalogCybersecurity();
-  const { data: dataSecurityItems = [], isLoading: loadingDS } = useGetCatalogDataSecurity();
-  const { data: webDevItems = [], isLoading: loadingWD } = useGetCatalogWebDevelopment();
-  const { data: voipItems = [], isLoading: loadingVoip } = useGetCatalogVoipSolutions();
+  const POLL = { query: { refetchInterval: 60_000, staleTime: 0 } } as const;
+  const { data: services = [], isLoading: loadingS } = useGetCatalogServices(POLL);
+  const { data: products = [], isLoading: loadingP } = useGetCatalogProducts(POLL);
+  const { data: hostingPackages = [], isLoading: loadingH } = useGetCatalogHostingPackages(POLL);
+  const { data: domainTlds = [], isLoading: loadingD } = useGetCatalogDomainTlds(POLL);
+  const { data: connectivityItems = [], isLoading: loadingC } = useGetCatalogConnectivity(POLL);
+  const { data: cybersecurityItems = [], isLoading: loadingCyber } = useGetCatalogCybersecurity(POLL);
+  const { data: dataSecurityItems = [], isLoading: loadingDS } = useGetCatalogDataSecurity(POLL);
+  const { data: webDevItems = [], isLoading: loadingWD } = useGetCatalogWebDevelopment(POLL);
+  const { data: voipItems = [], isLoading: loadingVoip } = useGetCatalogVoipSolutions(POLL);
 
   async function handleDomainCheck(e: React.FormEvent) {
     e.preventDefault();
