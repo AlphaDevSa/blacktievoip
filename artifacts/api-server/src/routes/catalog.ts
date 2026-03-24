@@ -1323,6 +1323,69 @@ router.delete("/admin/voip-items/:id", requireAdmin, async (req, res) => {
   } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
+router.patch("/admin/voip-items/reorder", requireAdmin, async (req, res) => {
+  try {
+    const items: { id: number; sortOrder: number }[] = req.body;
+    if (!Array.isArray(items)) return res.status(400).json({ error: "Expected array" });
+    await Promise.all(items.map(({ id, sortOrder }) => db.update(voipItemsTable).set({ sortOrder }).where(eq(voipItemsTable.id, id))));
+    return res.json({ success: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.patch("/admin/services/reorder", requireAdmin, async (req, res) => {
+  try {
+    const items: { id: number; sortOrder: number }[] = req.body;
+    if (!Array.isArray(items)) return res.status(400).json({ error: "Expected array" });
+    await Promise.all(items.map(({ id, sortOrder }) => db.update(servicesTable).set({ sortOrder }).where(eq(servicesTable.id, id))));
+    return res.json({ success: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.patch("/admin/products/reorder", requireAdmin, async (req, res) => {
+  try {
+    const items: { id: number; sortOrder: number }[] = req.body;
+    if (!Array.isArray(items)) return res.status(400).json({ error: "Expected array" });
+    await Promise.all(items.map(({ id, sortOrder }) => db.update(productsTable).set({ sortOrder }).where(eq(productsTable.id, id))));
+    return res.json({ success: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.patch("/admin/connectivity-items/reorder", requireAdmin, async (req, res) => {
+  try {
+    const items: { id: number; sortOrder: number }[] = req.body;
+    if (!Array.isArray(items)) return res.status(400).json({ error: "Expected array" });
+    await Promise.all(items.map(({ id, sortOrder }) => db.update(connectivityItemsTable).set({ sortOrder }).where(eq(connectivityItemsTable.id, id))));
+    return res.json({ success: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.patch("/admin/cybersecurity-items/reorder", requireAdmin, async (req, res) => {
+  try {
+    const items: { id: number; sortOrder: number }[] = req.body;
+    if (!Array.isArray(items)) return res.status(400).json({ error: "Expected array" });
+    await Promise.all(items.map(({ id, sortOrder }) => db.update(cybersecurityItemsTable).set({ sortOrder }).where(eq(cybersecurityItemsTable.id, id))));
+    return res.json({ success: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.patch("/admin/data-security-items/reorder", requireAdmin, async (req, res) => {
+  try {
+    const items: { id: number; sortOrder: number }[] = req.body;
+    if (!Array.isArray(items)) return res.status(400).json({ error: "Expected array" });
+    await Promise.all(items.map(({ id, sortOrder }) => db.update(dataSecurityItemsTable).set({ sortOrder }).where(eq(dataSecurityItemsTable.id, id))));
+    return res.json({ success: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.patch("/admin/web-dev-items/reorder", requireAdmin, async (req, res) => {
+  try {
+    const items: { id: number; sortOrder: number }[] = req.body;
+    if (!Array.isArray(items)) return res.status(400).json({ error: "Expected array" });
+    await Promise.all(items.map(({ id, sortOrder }) => db.update(webDevItemsTable).set({ sortOrder }).where(eq(webDevItemsTable.id, id))));
+    return res.json({ success: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
 router.get("/catalog/voip-solutions", async (_req, res) => {
   try {
     const items = await db.select({ id: voipItemsTable.id, categoryId: voipItemsTable.categoryId, categoryName: voipCategoriesTable.name, name: voipItemsTable.name, description: voipItemsTable.description, price: voipItemsTable.price, retailPriceExclVat: voipItemsTable.retailPriceExclVat, resellerPriceExclVat: voipItemsTable.resellerPriceExclVat, resellerPriceInclVat: voipItemsTable.resellerPriceInclVat, priceInclVat: voipItemsTable.priceInclVat, unit: voipItemsTable.unit, status: voipItemsTable.status, sortOrder: voipItemsTable.sortOrder, createdAt: voipItemsTable.createdAt })

@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { 
-  useAdminGetVoipCategories, 
+import {
+  useAdminGetVoipCategories,
   useAdminGetVoipItems,
   useAdminCreateVoipCategory,
   useAdminUpdateVoipCategory,
@@ -14,10 +14,27 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Phone, FolderTree, Trash2, Edit2, Tag, LayoutGrid, List, Folder, ChevronRight } from "lucide-react";
+import { Plus, Phone, FolderTree, Trash2, Edit2, Tag, LayoutGrid, List, Folder, ChevronRight, GripVertical } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { formatZar } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type ViewMode = "card" | "list";
 
@@ -32,19 +49,68 @@ function UnitBadge({ unit }: { unit: string }) {
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${m.color}`}>{m.label}</span>;
 }
 
+function SortableRow({
+  item,
+  onEdit,
+  onDelete,
+}: {
+  item: Service;
+  onEdit: (item: Service) => void;
+  onDelete: (id: number) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors bg-background border-b border-border/50 last:border-0"
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing touch-none shrink-0"
+        title="Drag to reorder"
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold truncate">{item.name}</p>
+        <p className="text-xs text-muted-foreground truncate">{(item as any).categoryName ?? "Uncategorised"}</p>
+      </div>
+      <div className="text-right shrink-0">
+        <p className="text-sm font-bold">{item.retailPriceExclVat != null ? formatZar(Number(item.retailPriceExclVat)) : "—"}</p>
+        <p className="text-xs text-primary font-semibold">{(item as any).resellerPriceExclVat != null ? formatZar(Number((item as any).resellerPriceExclVat)) : "—"}</p>
+      </div>
+      <UnitBadge unit={item.unit} />
+      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${item.status === "active" ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>{item.status}</span>
+      <div className="flex items-center gap-1">
+        <button onClick={() => onEdit(item)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
+        <button onClick={() => onDelete(item.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminVoipSolutionsCatalog() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: categories = [] } = useAdminGetVoipCategories();
   const { data: items = [] } = useAdminGetVoipItems();
   const [selectedCatId, setSelectedCatId] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("card");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [sidebarMode, setSidebarMode] = useState<"browse" | "manage">("browse");
   const [expandedCats, setExpandedCats] = useState<Set<number>>(new Set());
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Service | null>(null);
   const [editingCat, setEditingCat] = useState<Category | null>(null);
+  const [orderedItems, setOrderedItems] = useState<Service[]>([]);
 
   const createCat = useAdminCreateVoipCategory();
   const updateCat = useAdminUpdateVoipCategory();
@@ -53,7 +119,42 @@ export default function AdminVoipSolutionsCatalog() {
   const deleteItem = useAdminDeleteVoipItem();
   const deleteCat = useAdminDeleteVoipCategory();
 
-  const filteredItems = selectedCatId ? items.filter(s => s.categoryId === selectedCatId) : items;
+  const filteredItems = useMemo(
+    () => selectedCatId ? (items as Service[]).filter(s => s.categoryId === selectedCatId) : (items as Service[]),
+    [items, selectedCatId]
+  );
+
+  useEffect(() => {
+    setOrderedItems(filteredItems);
+  }, [filteredItems]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = orderedItems.findIndex(i => i.id === active.id);
+    const newIndex = orderedItems.findIndex(i => i.id === over.id);
+    const reordered = arrayMove(orderedItems, oldIndex, newIndex);
+    setOrderedItems(reordered);
+    const payload = reordered.map((item, idx) => ({ id: item.id, sortOrder: idx + 1 }));
+    try {
+      await fetch("/api/admin/voip-items/reorder", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/voip-items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/voip-solutions"] });
+    } catch {
+      toast({ title: "Failed to save order", variant: "destructive" });
+    }
+  }
+
   const parentCategories = (categories as Category[]).filter(c => !c.parentId);
   const subCatsOf = (id: number) => (categories as Category[]).filter(c => c.parentId === id);
   function toggleExpand(id: number) { setExpandedCats(prev => { const s = new Set(prev); if (s.has(id)) s.delete(id); else s.add(id); return s; }); }
@@ -83,7 +184,7 @@ export default function AdminVoipSolutionsCatalog() {
 
   async function handleDeleteCat(cat: Category) {
     if ((categories as Category[]).some(c => c.parentId === cat.id)) { toast({ title: "Remove sub-categories first", variant: "destructive" }); return; }
-    if (items.some(s => s.categoryId === cat.id)) { toast({ title: "Reassign items before deleting", variant: "destructive" }); return; }
+    if ((items as Service[]).some(s => s.categoryId === cat.id)) { toast({ title: "Reassign items before deleting", variant: "destructive" }); return; }
     if (!confirm(`Delete "${cat.name}"?`)) return;
     try { await deleteCat.mutateAsync({ id: cat.id }); toast({ title: `"${cat.name}" deleted` }); queryClient.invalidateQueries({ queryKey: ["/api/admin/voip-categories"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/voip-solutions"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] }); if (selectedCatId === cat.id) setSelectedCatId(null); }
     catch { toast({ title: "Failed to delete", variant: "destructive" }); }
@@ -130,14 +231,14 @@ export default function AdminVoipSolutionsCatalog() {
               {sidebarMode === "browse" ? (
                 <motion.div key="browse" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="space-y-1">
                   <button onClick={() => setSelectedCatId(null)} className={`w-full text-left flex items-center justify-between p-3 rounded-xl text-sm font-medium transition-all ${selectedCatId === null ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "hover:bg-black/5 text-muted-foreground hover:text-foreground"}`}><span>All Items</span><span className={`px-2 py-0.5 rounded-full text-xs ${selectedCatId === null ? "bg-black/[0.1]" : "bg-black/[0.07]"}`}>{items.length}</span></button>
-                  {parentCategories.map(parent => { const subs = subCatsOf(parent.id); return (<div key={parent.id}><button onClick={() => setSelectedCatId(parent.id === selectedCatId ? null : parent.id)} className={`w-full text-left flex items-center justify-between p-3 rounded-xl text-xs font-semibold transition-all ${selectedCatId === parent.id ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "hover:bg-black/5 text-muted-foreground hover:text-foreground"}`}><div className="flex items-center gap-2 min-w-0"><Tag className="w-3.5 h-3.5 shrink-0" /><span className="truncate">{parent.name}</span></div><span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ${selectedCatId === parent.id ? "bg-white/20" : "bg-muted text-muted-foreground"}`}>{items.filter(s => s.categoryId === parent.id).length}</span></button>{subs.map(sub => (<button key={sub.id} onClick={() => setSelectedCatId(sub.id === selectedCatId ? null : sub.id)} className={`w-full text-left flex items-center justify-between pl-7 pr-3 py-1.5 rounded-xl text-xs transition-all ${selectedCatId === sub.id ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 font-semibold" : "text-muted-foreground hover:bg-black/5 hover:text-foreground"}`}><div className="flex items-center gap-1.5 min-w-0"><Tag className="w-2.5 h-2.5 shrink-0" /><span className="truncate">{sub.name}</span></div><span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ${selectedCatId === sub.id ? "bg-white/20" : "bg-muted text-muted-foreground"}`}>{items.filter(s => s.categoryId === sub.id).length}</span></button>))}</div>); })}
+                  {parentCategories.map(parent => { const subs = subCatsOf(parent.id); return (<div key={parent.id}><button onClick={() => setSelectedCatId(parent.id === selectedCatId ? null : parent.id)} className={`w-full text-left flex items-center justify-between p-3 rounded-xl text-xs font-semibold transition-all ${selectedCatId === parent.id ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "hover:bg-black/5 text-muted-foreground hover:text-foreground"}`}><div className="flex items-center gap-2 min-w-0"><Tag className="w-3.5 h-3.5 shrink-0" /><span className="truncate">{parent.name}</span></div><span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ${selectedCatId === parent.id ? "bg-white/20" : "bg-muted text-muted-foreground"}`}>{(items as Service[]).filter(s => s.categoryId === parent.id).length}</span></button>{subs.map(sub => (<button key={sub.id} onClick={() => setSelectedCatId(sub.id === selectedCatId ? null : sub.id)} className={`w-full text-left flex items-center justify-between pl-7 pr-3 py-1.5 rounded-xl text-xs transition-all ${selectedCatId === sub.id ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 font-semibold" : "text-muted-foreground hover:bg-black/5 hover:text-foreground"}`}><div className="flex items-center gap-1.5 min-w-0"><Tag className="w-2.5 h-2.5 shrink-0" /><span className="truncate">{sub.name}</span></div><span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ${selectedCatId === sub.id ? "bg-white/20" : "bg-muted text-muted-foreground"}`}>{(items as Service[]).filter(s => s.categoryId === sub.id).length}</span></button>))}</div>); })}
                 </motion.div>
               ) : (
                 <motion.div key="manage" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="space-y-2">
                   <div className="flex gap-1.5"><div className="flex-1 bg-background border border-border rounded-lg p-2 text-center"><p className="text-lg font-bold">{parentCategories.length}</p><p className="text-[10px] text-muted-foreground">Categories</p></div><div className="flex-1 bg-background border border-border rounded-lg p-2 text-center"><p className="text-lg font-bold">{(categories as Category[]).filter(c => !!c.parentId).length}</p><p className="text-[10px] text-muted-foreground">Sub-cats</p></div></div>
                   <button onClick={() => openCreateCat()} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-primary/40 text-xs font-semibold text-primary hover:bg-primary/5 transition-all"><Plus className="w-3.5 h-3.5" /> Add Category</button>
                   {parentCategories.length === 0 ? <div className="text-center py-6 text-muted-foreground/50"><FolderTree className="w-8 h-8 mx-auto mb-2 opacity-30" /><p className="text-xs">No categories yet</p></div> : (
-                    <div className="space-y-1">{parentCategories.map(parent => { const subs = subCatsOf(parent.id); const isExpanded = expandedCats.has(parent.id); return (<div key={parent.id} className="bg-background border border-border rounded-xl overflow-hidden"><div className="flex items-center gap-1.5 px-2.5 py-2 group"><button onClick={() => toggleExpand(parent.id)} className="text-muted-foreground hover:text-foreground transition-colors shrink-0"><ChevronRight className={`w-3.5 h-3.5 transition-transform duration-150 ${isExpanded ? "rotate-90" : ""} ${subs.length === 0 ? "opacity-20" : ""}`} /></button><div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center shrink-0"><Folder className="w-3 h-3 text-primary" /></div><div className="flex-1 min-w-0"><p className="text-xs font-semibold text-foreground truncate">{parent.name}</p><p className="text-[10px] text-muted-foreground">{subs.length} sub · {items.filter(s => s.categoryId === parent.id).length} items</p></div><div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"><button onClick={() => openCreateCat(parent.id)} className="p-1 hover:bg-emerald-500/10 rounded text-muted-foreground hover:text-emerald-600 transition-colors"><Plus className="w-3 h-3" /></button><button onClick={() => openEditCat(parent)} className="p-1 hover:bg-primary/10 rounded text-muted-foreground hover:text-primary transition-colors"><Edit2 className="w-3 h-3" /></button><button onClick={() => handleDeleteCat(parent)} className="p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="w-3 h-3" /></button></div></div><AnimatePresence>{isExpanded && (<motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }} className="overflow-hidden border-t border-border/50 bg-muted/5">{subs.map(sub => (<div key={sub.id} className="flex items-center gap-1.5 pl-8 pr-2.5 py-1.5 group/sub border-t border-dashed border-border/30 first:border-t-0"><Tag className="w-2.5 h-2.5 text-primary/50 shrink-0" /><div className="flex-1 min-w-0"><p className="text-[11px] font-medium text-foreground truncate">{sub.name}</p><p className="text-[10px] text-muted-foreground">{items.filter(s => s.categoryId === sub.id).length} items</p></div><div className="flex items-center gap-0.5 opacity-0 group-hover/sub:opacity-100 transition-opacity shrink-0"><button onClick={() => openEditCat(sub)} className="p-1 hover:bg-primary/10 rounded text-muted-foreground hover:text-primary transition-colors"><Edit2 className="w-2.5 h-2.5" /></button><button onClick={() => handleDeleteCat(sub)} className="p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="w-2.5 h-2.5" /></button></div></div>))}<button onClick={() => openCreateCat(parent.id)} className="w-full flex items-center gap-1.5 pl-8 pr-2.5 py-1.5 text-[11px] text-primary/60 hover:text-primary hover:bg-primary/5 transition-colors border-t border-dashed border-border/30"><Plus className="w-2.5 h-2.5" /> Add sub-category</button></motion.div>)}</AnimatePresence></div>); })}</div>
+                    <div className="space-y-1">{parentCategories.map(parent => { const subs = subCatsOf(parent.id); const isExpanded = expandedCats.has(parent.id); return (<div key={parent.id} className="bg-background border border-border rounded-xl overflow-hidden"><div className="flex items-center gap-1.5 px-2.5 py-2 group"><button onClick={() => toggleExpand(parent.id)} className="text-muted-foreground hover:text-foreground transition-colors shrink-0"><ChevronRight className={`w-3.5 h-3.5 transition-transform duration-150 ${isExpanded ? "rotate-90" : ""} ${subs.length === 0 ? "opacity-20" : ""}`} /></button><div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center shrink-0"><Folder className="w-3 h-3 text-primary" /></div><div className="flex-1 min-w-0"><p className="text-xs font-semibold text-foreground truncate">{parent.name}</p><p className="text-[10px] text-muted-foreground">{subs.length} sub · {(items as Service[]).filter(s => s.categoryId === parent.id).length} items</p></div><div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"><button onClick={() => openCreateCat(parent.id)} className="p-1 hover:bg-emerald-500/10 rounded text-muted-foreground hover:text-emerald-600 transition-colors"><Plus className="w-3 h-3" /></button><button onClick={() => openEditCat(parent)} className="p-1 hover:bg-primary/10 rounded text-muted-foreground hover:text-primary transition-colors"><Edit2 className="w-3 h-3" /></button><button onClick={() => handleDeleteCat(parent)} className="p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="w-3 h-3" /></button></div></div><AnimatePresence>{isExpanded && (<motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.15 }} className="overflow-hidden border-t border-border/50 bg-muted/5">{subs.map(sub => (<div key={sub.id} className="flex items-center gap-1.5 pl-8 pr-2.5 py-1.5 group border-b border-border/30 last:border-0"><div className="w-4 h-4 rounded flex items-center justify-center shrink-0"><Tag className="w-2.5 h-2.5 text-muted-foreground" /></div><div className="flex-1 min-w-0"><p className="text-[11px] font-medium text-foreground truncate">{sub.name}</p><p className="text-[10px] text-muted-foreground">{(items as Service[]).filter(s => s.categoryId === sub.id).length} items</p></div><div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => openEditCat(sub)} className="p-1 hover:bg-primary/10 rounded text-muted-foreground hover:text-primary transition-colors"><Edit2 className="w-2.5 h-2.5" /></button><button onClick={() => handleDeleteCat(sub)} className="p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="w-2.5 h-2.5" /></button></div></div>))}</motion.div>)}</AnimatePresence></div>); })}</div>
                   )}
                 </motion.div>
               )}
@@ -147,20 +248,61 @@ export default function AdminVoipSolutionsCatalog() {
 
         <div className="flex-1 flex flex-col bg-card border border-border rounded-2xl shadow-lg overflow-hidden">
           <div className="p-4 border-b border-border/50 flex items-center justify-between bg-muted/20">
-            <h3 className="font-display font-bold flex items-center gap-2 text-lg"><Phone className="w-5 h-5 text-primary" />{selectedCatId ? categories.find(c => c.id === selectedCatId)?.name : "All Items"}<span className="text-xs font-normal text-muted-foreground">({filteredItems.length})</span></h3>
+            <h3 className="font-display font-bold flex items-center gap-2 text-lg">
+              <Phone className="w-5 h-5 text-primary" />
+              {selectedCatId ? categories.find(c => c.id === selectedCatId)?.name : "All Items"}
+              <span className="text-xs font-normal text-muted-foreground">({orderedItems.length})</span>
+            </h3>
             <div className="flex items-center gap-2">
-              <div className="flex items-center bg-muted/30 rounded-lg p-0.5 border border-border/50"><button onClick={() => setViewMode("card")} className={`p-1.5 rounded-md transition-all ${viewMode === "card" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}><LayoutGrid className="w-4 h-4" /></button><button onClick={() => setViewMode("list")} className={`p-1.5 rounded-md transition-all ${viewMode === "list" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}><List className="w-4 h-4" /></button></div>
+              <div className="flex items-center bg-muted/30 rounded-lg p-0.5 border border-border/50">
+                <button onClick={() => setViewMode("card")} className={`p-1.5 rounded-md transition-all ${viewMode === "card" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}><LayoutGrid className="w-4 h-4" /></button>
+                <button onClick={() => setViewMode("list")} className={`p-1.5 rounded-md transition-all ${viewMode === "list" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}><List className="w-4 h-4" /></button>
+              </div>
               <button onClick={openAddItem} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 transition-all"><Plus className="w-4 h-4" /> Add Item</button>
             </div>
           </div>
           <div className="flex-1 overflow-auto">
-            {filteredItems.length === 0 ? (<div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3"><Phone className="w-10 h-10 opacity-20" /><p>No items found.</p></div>
+            {orderedItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3"><Phone className="w-10 h-10 opacity-20" /><p>No items found.</p></div>
             ) : viewMode === "card" ? (
               <div className="p-4 grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-                {filteredItems.map((item: Service, idx) => (<motion.div key={item.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }} className="bg-background border border-border rounded-xl overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow"><div className="h-1.5 bg-gradient-to-r from-orange-500 to-amber-500" /><div className="p-3 flex-1 flex flex-col gap-2"><div className="flex items-start justify-between gap-2"><div className="flex-1 min-w-0"><p className="text-sm font-semibold text-foreground truncate">{item.name}</p>{(item as any).categoryName && <p className="text-[10px] text-muted-foreground truncate">{(item as any).categoryName}</p>}</div><span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 ${item.status === "active" ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>{item.status}</span></div>{item.description && <p className="text-[11px] text-muted-foreground line-clamp-2">{item.description}</p>}<div className="mt-auto pt-2 border-t border-border/50 space-y-1"><div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground">Retail excl. VAT</span><span className="text-xs font-bold text-foreground">{item.retailPriceExclVat != null ? formatZar(Number(item.retailPriceExclVat)) : "—"}</span></div><div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground">Reseller excl. VAT</span><span className="text-xs font-semibold text-primary">{(item as any).resellerPriceExclVat != null ? formatZar(Number((item as any).resellerPriceExclVat)) : "—"}</span></div><div className="flex items-center justify-between"><UnitBadge unit={item.unit} /><span className="text-[10px] text-muted-foreground">incl. VAT: {item.priceInclVat != null ? formatZar(Number(item.priceInclVat)) : "—"}</span></div></div></div><div className="p-2 pt-0 flex gap-1.5"><button onClick={() => openEditItem(item)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all"><Edit2 className="w-3 h-3" /> Edit</button><button onClick={() => handleDeleteItem(item.id)} className="flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/5 transition-all"><Trash2 className="w-3 h-3" /></button></div></motion.div>))}
+                {orderedItems.map((item: Service, idx) => (
+                  <motion.div key={item.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }} className="bg-background border border-border rounded-xl overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow">
+                    <div className="h-1.5 bg-gradient-to-r from-orange-500 to-amber-500" />
+                    <div className="p-3 flex-1 flex flex-col gap-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0"><p className="text-sm font-semibold text-foreground truncate">{item.name}</p>{(item as any).categoryName && <p className="text-[10px] text-muted-foreground truncate">{(item as any).categoryName}</p>}</div>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 ${item.status === "active" ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>{item.status}</span>
+                      </div>
+                      {item.description && <p className="text-[11px] text-muted-foreground line-clamp-2">{item.description}</p>}
+                      <div className="mt-auto pt-2 border-t border-border/50 space-y-1">
+                        <div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground">Retail excl. VAT</span><span className="text-xs font-bold text-foreground">{item.retailPriceExclVat != null ? formatZar(Number(item.retailPriceExclVat)) : "—"}</span></div>
+                        <div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground">Reseller excl. VAT</span><span className="text-xs font-semibold text-primary">{(item as any).resellerPriceExclVat != null ? formatZar(Number((item as any).resellerPriceExclVat)) : "—"}</span></div>
+                        <div className="flex items-center justify-between"><UnitBadge unit={item.unit} /><span className="text-[10px] text-muted-foreground">incl. VAT: {item.priceInclVat != null ? formatZar(Number(item.priceInclVat)) : "—"}</span></div>
+                      </div>
+                    </div>
+                    <div className="p-2 pt-0 flex gap-1.5">
+                      <button onClick={() => openEditItem(item)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border border-border text-[11px] font-semibold text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"><Edit2 className="w-3 h-3" /> Edit</button>
+                      <button onClick={() => handleDeleteItem(item.id)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border border-border text-[11px] font-semibold text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors"><Trash2 className="w-3 h-3" /> Delete</button>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
             ) : (
-              <div className="divide-y divide-border/50">{filteredItems.map((item: Service) => (<div key={item.id} className="flex items-center gap-4 px-4 py-3 hover:bg-muted/20 transition-colors"><div className="flex-1 min-w-0"><p className="text-sm font-semibold truncate">{item.name}</p><p className="text-xs text-muted-foreground truncate">{(item as any).categoryName ?? "Uncategorised"}</p></div><div className="text-right shrink-0"><p className="text-sm font-bold">{item.retailPriceExclVat != null ? formatZar(Number(item.retailPriceExclVat)) : "—"}</p><p className="text-xs text-primary font-semibold">{(item as any).resellerPriceExclVat != null ? formatZar(Number((item as any).resellerPriceExclVat)) : "—"}</p></div><UnitBadge unit={item.unit} /><span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${item.status === "active" ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>{item.status}</span><div className="flex items-center gap-1"><button onClick={() => openEditItem(item)} className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"><Edit2 className="w-3.5 h-3.5" /></button><button onClick={() => handleDeleteItem(item.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="w-3.5 h-3.5" /></button></div></div>))}</div>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={orderedItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                  <div>
+                    {orderedItems.map(item => (
+                      <SortableRow
+                        key={item.id}
+                        item={item}
+                        onEdit={openEditItem}
+                        onDelete={handleDeleteItem}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             )}
           </div>
         </div>
