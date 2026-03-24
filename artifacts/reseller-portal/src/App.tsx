@@ -37,8 +37,7 @@ import ResellerProfile from "@/pages/reseller/profile";
 import ResellerMyDids from "@/pages/reseller/dids/index";
 import ResellerRequestDid from "@/pages/reseller/dids/request";
 import ResellerCatalog from "@/pages/reseller/catalog/index";
-import ResellerOrders from "@/pages/reseller/orders/index";
-import ResellerNewOrder from "@/pages/reseller/orders/new";
+
 import { AdminFibreCoverage, ResellerFibreCoverage } from "@/pages/connectivity/fibre";
 import { AdminTelkomLte, ResellerTelkomLte } from "@/pages/connectivity/telkom-lte";
 import AdminStaff from "@/pages/admin/staff/index";
@@ -218,12 +217,6 @@ function Router() {
       </Route>
       <Route path="/reseller/catalog">
         {() => <ProtectedRoute role="reseller" component={ResellerCatalog} />}
-      </Route>
-      <Route path="/reseller/orders">
-        {() => <ProtectedRoute role="reseller" component={ResellerOrders} />}
-      </Route>
-      <Route path="/reseller/orders/new">
-        {() => <ProtectedRoute role="reseller" component={ResellerNewOrder} />}
       </Route>
       <Route path="/reseller/connectivity/fibre">
         {() => <ProtectedRoute role="reseller" component={ResellerFibreCoverage} />}

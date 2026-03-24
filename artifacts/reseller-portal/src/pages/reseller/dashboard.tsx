@@ -1,7 +1,6 @@
 import {
   useResellerGetStats,
   useGetNotices,
-  useGetMyOrders,
   useGetCatalogNewItems,
   Notice,
 } from "@workspace/api-client-react";
@@ -9,19 +8,12 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { formatZar } from "@/lib/utils";
 import {
   Users, PhoneCall, CreditCard, ArrowUpRight,
-  Bell, AlertTriangle, CheckCircle2, Info, ShoppingCart,
-  Clock, Package, Server, Globe, Tag, ChevronRight, Sparkles, Network,
+  Bell, AlertTriangle, CheckCircle2, Info,
+  Package, Server, Globe, Tag, ChevronRight, Sparkles, Network,
   Shield, Lock, Phone,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-
-const STATUS_STYLES: Record<string, { label: string; cls: string }> = {
-  pending:    { label: "Pending",    cls: "bg-amber-500/10 text-amber-600 border-amber-300/30" },
-  processing: { label: "Processing", cls: "bg-blue-500/10 text-blue-600 border-blue-300/30" },
-  completed:  { label: "Completed",  cls: "bg-emerald-500/10 text-emerald-600 border-emerald-300/30" },
-  cancelled:  { label: "Cancelled",  cls: "bg-red-500/10 text-red-500 border-red-300/30" },
-};
 
 const NOTICE_STYLES: Record<string, { icon: React.ElementType; bg: string; border: string; iconCls: string }> = {
   info:    { icon: Info,          bg: "bg-blue-50 dark:bg-blue-950/20",       border: "border-blue-200 dark:border-blue-800",    iconCls: "text-blue-500" },
@@ -31,13 +23,13 @@ const NOTICE_STYLES: Record<string, { icon: React.ElementType; bg: string; borde
 };
 
 const CATALOG_TYPE_ICONS: Record<string, React.ElementType> = {
-  service:         Server,
-  product:         Package,
-  hosting:         Globe,
-  domain:          Tag,
-  connectivity:    Network,
-  cybersecurity:   Shield,
-  "data-security": Lock,
+  service:           Server,
+  product:           Package,
+  hosting:           Globe,
+  domain:            Tag,
+  connectivity:      Network,
+  cybersecurity:     Shield,
+  "data-security":   Lock,
   "web-development": Globe,
   "voip-solutions":  Phone,
 };
@@ -58,10 +50,8 @@ export default function ResellerDashboard() {
   const [, setLocation] = useLocation();
   const { data: stats, isLoading } = useResellerGetStats();
   const { data: notices = [] } = useGetNotices();
-  const { data: orders = [] } = useGetMyOrders();
   const { data: catalogItems } = useGetCatalogNewItems({ query: { refetchInterval: 60_000, staleTime: 0 } });
 
-  const recentOrders = (orders as any[]).slice(0, 5);
   const newItems = catalogItems?.recentItems ?? [];
 
   const statCards = [
@@ -175,140 +165,57 @@ export default function ResellerDashboard() {
         ))}
       </div>
 
-      {/* ── Bottom Row: Orders + New Catalog Items ────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* ── Available Catalog ─────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45 }}
+        className="bg-card border border-border rounded-2xl shadow-lg overflow-hidden"
+      >
+        <div className="p-5 border-b border-border/50 flex items-center justify-between bg-muted/10">
+          <h3 className="font-display font-bold text-base flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            Available Catalog
+          </h3>
+          <button
+            onClick={() => setLocation("/reseller/catalog")}
+            className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+          >
+            Browse all <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
-        {/* Recent Orders */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45 }}
-          className="bg-card border border-border rounded-2xl shadow-lg overflow-hidden"
-        >
-          <div className="p-5 border-b border-border/50 flex items-center justify-between bg-muted/10">
-            <h3 className="font-display font-bold text-base flex items-center gap-2">
-              <ShoppingCart className="w-4 h-4 text-primary" />
-              My Orders
-            </h3>
-            <button
-              onClick={() => setLocation("/reseller/orders")}
-              className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-            >
-              View all <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+        <div className="p-4 space-y-4">
+          {catalogItems && (
+            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2">
+              {catalogStats.map(item => (
+                <button
+                  key={item.label}
+                  onClick={() => setLocation("/reseller/catalog")}
+                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-muted/10 border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all"
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.cls}`}>
+                    <item.icon className="w-4 h-4" />
+                  </div>
+                  <p className="text-lg font-bold text-foreground leading-none">{item.count}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium text-center leading-tight">{item.label}</p>
+                </button>
+              ))}
+            </div>
+          )}
 
-          {recentOrders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <ShoppingCart className="w-10 h-10 opacity-20 mb-3" />
-              <p className="text-sm">No orders yet</p>
-              <button
-                onClick={() => setLocation("/reseller/orders/new")}
-                className="mt-3 px-4 py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
-              >
-                Place Your First Order
-              </button>
+          {newItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground text-sm">
+              <Package className="w-8 h-8 opacity-20 mb-2" />
+              No recent additions
             </div>
           ) : (
-            <div className="divide-y divide-border/40">
-              {recentOrders.map((order: any) => {
-                const st = STATUS_STYLES[order.status] ?? STATUS_STYLES.pending;
-                return (
-                  <div
-                    key={order.id}
-                    className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/10 transition-colors cursor-pointer"
-                    onClick={() => setLocation(`/reseller/orders/${order.id}`)}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <ShoppingCart className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm text-foreground font-mono">ORD-{String(order.id).padStart(6, "0")}</p>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Clock className="w-3 h-3" />
-                          {new Date(order.createdAt).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}, {new Date(order.createdAt).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" })}
-                          <span className="text-muted-foreground/40">·</span>
-                          {order.itemCount} item{order.itemCount !== 1 ? "s" : ""}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 flex-shrink-0 ml-2">
-                      <span className="font-semibold text-sm text-foreground">{formatZar(order.totalInclVat)}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${st.cls}`}>
-                        {st.label}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {recentOrders.length > 0 && (
-            <div className="p-4 border-t border-border/40">
-              <button
-                onClick={() => setLocation("/reseller/orders/new")}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition-colors"
-              >
-                <ShoppingCart className="w-4 h-4" /> Place New Order
-              </button>
-            </div>
-          )}
-        </motion.div>
-
-        {/* Available Catalog */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.55 }}
-          className="bg-card border border-border rounded-2xl shadow-lg overflow-hidden"
-        >
-          <div className="p-5 border-b border-border/50 flex items-center justify-between bg-muted/10">
-            <h3 className="font-display font-bold text-base flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              Available Catalog
-            </h3>
-            <button
-              onClick={() => setLocation("/reseller/catalog")}
-              className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-            >
-              Browse all <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="p-4 space-y-1">
-            {/* All catalog type counts */}
-            {catalogItems && (
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                {catalogStats.map(item => (
-                  <button
-                    key={item.label}
-                    onClick={() => setLocation("/reseller/catalog")}
-                    className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-muted/10 border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all"
-                  >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.cls}`}>
-                      <item.icon className="w-4 h-4" />
-                    </div>
-                    <p className="text-lg font-bold text-foreground leading-none">{item.count}</p>
-                    <p className="text-[10px] text-muted-foreground font-medium text-center leading-tight">{item.label}</p>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Recent additions */}
-            {newItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground text-sm">
-                <Package className="w-8 h-8 opacity-20 mb-2" />
-                No recent additions
-              </div>
-            ) : (
-              <div className="space-y-1">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-2">
-                  Recently Added (last 30 days)
-                </p>
-                {newItems.slice(0, 6).map((item: any) => {
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide px-1 mb-2">
+                Recently Added (last 30 days)
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
+                {newItems.slice(0, 9).map((item: any) => {
                   const Icon = CATALOG_TYPE_ICONS[item.type] ?? Package;
                   return (
                     <div key={`${item.type}-${item.id}`} className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-muted/10 transition-colors">
@@ -324,11 +231,11 @@ export default function ResellerDashboard() {
                   );
                 })}
               </div>
-            )}
-          </div>
-        </motion.div>
+            </div>
+          )}
+        </div>
+      </motion.div>
 
-      </div>
     </AppLayout>
   );
 }
