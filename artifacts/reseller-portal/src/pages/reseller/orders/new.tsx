@@ -626,7 +626,7 @@ export default function ResellerNewOrder() {
                     const isSingleLine = isSingleLineService(service);
                     const isPbxExt = isPbxExtensionService(service);
                     const needsDid = isVoipService(service) || isSingleLine;
-                    const isDidOnly = isSingleLine || isPbxExt; // no bundle step needed
+                    const isDidOnly = false; // all VoIP/PBX/single-line services require area code + DID + minute bundle
                     const panelOpen = voipDidPanelServiceId === service.id;
                     // Mutual exclusion: block adding PBX if single-line in cart, or vice versa
                     const blockedByConflict =
