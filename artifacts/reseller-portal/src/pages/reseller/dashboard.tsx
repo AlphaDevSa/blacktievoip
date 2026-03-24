@@ -10,7 +10,7 @@ import { formatZar } from "@/lib/utils";
 import {
   Users, PhoneCall, CreditCard, ArrowUpRight,
   Bell, AlertTriangle, CheckCircle2, Info, X, ShoppingCart,
-  Clock, Package, Server, Globe, Tag, ChevronRight, Sparkles,
+  Clock, Package, Server, Globe, Tag, ChevronRight, Sparkles, Network,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
@@ -257,10 +257,11 @@ export default function ResellerDashboard() {
           <div className="p-4 space-y-1">
             {/* Totals summary row */}
             {catalogItems && (
-              <div className="grid grid-cols-4 gap-2 mb-4">
+              <div className="grid grid-cols-5 gap-2 mb-4">
                 {[
-                  { label: "Services", count: catalogItems.totalServices, icon: Server, cls: "bg-blue-500/10 text-blue-500" },
-                  { label: "Products", count: catalogItems.totalProducts, icon: Package, cls: "bg-amber-500/10 text-amber-500" },
+                  { label: "VoIP", count: catalogItems.totalServices, icon: Server, cls: "bg-blue-500/10 text-blue-500" },
+                  { label: "Connectivity", count: catalogItems.totalConnectivity ?? 0, icon: Network, cls: "bg-emerald-500/10 text-emerald-500" },
+                  { label: "Hardware", count: catalogItems.totalProducts, icon: Package, cls: "bg-amber-500/10 text-amber-500" },
                   { label: "Hosting", count: catalogItems.totalHosting, icon: Globe, cls: "bg-primary/10 text-primary" },
                   { label: "Domains", count: catalogItems.totalDomains, icon: Tag, cls: "bg-purple-500/10 text-purple-500" },
                 ].map(item => (

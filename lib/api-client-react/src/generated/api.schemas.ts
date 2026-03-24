@@ -861,6 +861,7 @@ export interface NewCatalogItems {
   totalProducts: number;
   totalHosting: number;
   totalDomains: number;
+  totalConnectivity: number;
 }
 
 export type ConnectivityItemStatus =

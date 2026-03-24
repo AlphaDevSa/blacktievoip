@@ -714,6 +714,39 @@ router.delete("/admin/connectivity-items/:id", requireAdmin, async (req, res) =>
 
 // ── Catalog (public/reseller read-only) ─────────────────────────────────────
 
+router.get("/catalog/connectivity", async (_req, res) => {
+  try {
+    const items = await db
+      .select({
+        id: connectivityItemsTable.id,
+        categoryId: connectivityItemsTable.categoryId,
+        categoryName: connectivityCategoriesTable.name,
+        name: connectivityItemsTable.name,
+        description: connectivityItemsTable.description,
+        speed: connectivityItemsTable.speed,
+        provider: connectivityItemsTable.provider,
+        contention: connectivityItemsTable.contention,
+        contractMonths: connectivityItemsTable.contractMonths,
+        setupFeeExclVat: connectivityItemsTable.setupFeeExclVat,
+        retailPriceExclVat: connectivityItemsTable.retailPriceExclVat,
+        retailPriceInclVat: connectivityItemsTable.retailPriceInclVat,
+        resellerPriceExclVat: connectivityItemsTable.resellerPriceExclVat,
+        resellerPriceInclVat: connectivityItemsTable.resellerPriceInclVat,
+        status: connectivityItemsTable.status,
+        sortOrder: connectivityItemsTable.sortOrder,
+        createdAt: connectivityItemsTable.createdAt,
+      })
+      .from(connectivityItemsTable)
+      .leftJoin(connectivityCategoriesTable, eq(connectivityItemsTable.categoryId, connectivityCategoriesTable.id))
+      .where(eq(connectivityItemsTable.status, "active"))
+      .orderBy(connectivityItemsTable.sortOrder, connectivityItemsTable.name);
+    return res.json(items.map((i) => serializeConnectivityItem(i)));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/catalog/services", async (_req, res) => {
   try {
     const services = await db
@@ -834,7 +867,13 @@ router.get("/catalog/new-items", async (_req, res) => {
       .where(eq(domainTldsTable.status, "active"))
       .orderBy(domainTldsTable.createdAt);
 
-    const allItems = [...newServices, ...newProducts, ...newHosting, ...newTlds]
+    const newConnectivity = await db
+      .select({ id: connectivityItemsTable.id, name: connectivityItemsTable.name, type: sql<string>`'connectivity'`, createdAt: connectivityItemsTable.createdAt })
+      .from(connectivityItemsTable)
+      .where(eq(connectivityItemsTable.status, "active"))
+      .orderBy(connectivityItemsTable.createdAt);
+
+    const allItems = [...newServices, ...newProducts, ...newHosting, ...newTlds, ...newConnectivity]
       .map(i => ({ ...i, createdAt: i.createdAt instanceof Date ? i.createdAt.toISOString() : i.createdAt }))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 20);
@@ -847,6 +886,7 @@ router.get("/catalog/new-items", async (_req, res) => {
       totalProducts: newProducts.length,
       totalHosting: newHosting.length,
       totalDomains: newTlds.length,
+      totalConnectivity: newConnectivity.length,
     });
   } catch (err) {
     console.error(err);

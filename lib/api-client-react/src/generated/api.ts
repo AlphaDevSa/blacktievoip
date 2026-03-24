@@ -5383,6 +5383,80 @@ export function useGetCatalogProducts<
 }
 
 /**
+ * @summary Get active connectivity items (reseller view)
+ */
+export const getGetCatalogConnectivityUrl = () => {
+  return `/api/catalog/connectivity`;
+};
+
+export const getCatalogConnectivity = async (
+  options?: RequestInit,
+): Promise<ConnectivityItem[]> => {
+  return customFetch<ConnectivityItem[]>(getGetCatalogConnectivityUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCatalogConnectivityQueryKey = () => {
+  return [`/api/catalog/connectivity`] as const;
+};
+
+export const getGetCatalogConnectivityQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCatalogConnectivity>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCatalogConnectivity>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCatalogConnectivityQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCatalogConnectivity>>
+  > = ({ signal }) => getCatalogConnectivity({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCatalogConnectivity>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCatalogConnectivityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCatalogConnectivity>>
+>;
+export type GetCatalogConnectivityQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get active connectivity items (reseller view)
+ */
+export function useGetCatalogConnectivity<
+  TData = Awaited<ReturnType<typeof getCatalogConnectivity>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCatalogConnectivity>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCatalogConnectivityQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Import DIDs from a public Google Sheet (dry-run or actual)
  */
 export const getAdminImportDidsFromSheetsUrl = () => {

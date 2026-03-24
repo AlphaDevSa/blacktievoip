@@ -5,13 +5,15 @@ import {
   useGetCatalogProducts,
   useGetCatalogHostingPackages,
   useGetCatalogDomainTlds,
+  useGetCatalogConnectivity,
   Service,
   Product,
   HostingPackage,
   DomainTld,
+  ConnectivityItem,
 } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Server, Package, Search, Globe, HardDrive, Mail, Database, Shield, Wifi, Tag, Calendar, CheckCircle2, XCircle, Loader2, AlertCircle, ShoppingCart } from "lucide-react";
+import { Server, Package, Search, Globe, HardDrive, Mail, Database, Shield, Wifi, Tag, Calendar, CheckCircle2, XCircle, Loader2, AlertCircle, ShoppingCart, Network } from "lucide-react";
 import { formatZar } from "@/lib/utils";
 import { useLocation } from "wouter";
 
@@ -22,7 +24,7 @@ type DomainCheckResult = {
   nameservers?: string[];
 };
 
-type Tab = "services" | "products" | "hosting" | "domains";
+type Tab = "services" | "products" | "hosting" | "domains" | "connectivity";
 
 function vatPrices(item: {
   price?: number | null;
@@ -61,6 +63,7 @@ export default function ResellerCatalog() {
   const { data: products = [], isLoading: loadingP } = useGetCatalogProducts();
   const { data: hostingPackages = [], isLoading: loadingH } = useGetCatalogHostingPackages();
   const { data: domainTlds = [], isLoading: loadingD } = useGetCatalogDomainTlds();
+  const { data: connectivityItems = [], isLoading: loadingC } = useGetCatalogConnectivity();
 
   async function handleDomainCheck(e: React.FormEvent) {
     e.preventDefault();
@@ -100,9 +103,16 @@ export default function ResellerCatalog() {
     t.tld.toLowerCase().includes(search.toLowerCase()) ||
     (t.description && t.description.toLowerCase().includes(search.toLowerCase()))
   );
+  const filteredConnectivity = (connectivityItems as ConnectivityItem[]).filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    (c.description && c.description.toLowerCase().includes(search.toLowerCase())) ||
+    (c.provider && c.provider.toLowerCase().includes(search.toLowerCase())) ||
+    (c.speed && c.speed.toLowerCase().includes(search.toLowerCase()))
+  );
 
   const tabs: { id: Tab; label: string; icon: React.ElementType; count: number }[] = [
     { id: "services", label: "VoIP Services", icon: Server, count: services.length },
+    { id: "connectivity", label: "Connectivity", icon: Network, count: connectivityItems.length },
     { id: "products", label: "Hardware", icon: Package, count: products.length },
     { id: "hosting", label: "Web Hosting", icon: Globe, count: hostingPackages.length },
     { id: "domains", label: "Domains", icon: Tag, count: domainTlds.length },
@@ -111,6 +121,7 @@ export default function ResellerCatalog() {
   const isLoading = activeTab === "services" ? loadingS
     : activeTab === "products" ? loadingP
     : activeTab === "hosting" ? loadingH
+    : activeTab === "connectivity" ? loadingC
     : loadingD;
 
   return (
@@ -299,6 +310,79 @@ export default function ResellerCatalog() {
                       <button
                         onClick={() => orderItem("hosting", pkg.id)}
                         className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-md shadow-primary/20 hover:bg-primary/90 hover:-translate-y-0.5 transition-all"
+                      >
+                        <ShoppingCart className="w-4 h-4" /> Order
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )
+        ) : activeTab === "connectivity" ? (
+          filteredConnectivity.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+              <Network className="w-12 h-12 opacity-20 mb-3" />
+              <p className="font-medium">No connectivity packages available</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredConnectivity.map((item: ConnectivityItem, idx) => {
+                const exclVat = Number(item.resellerPriceExclVat ?? item.retailPriceExclVat ?? 0);
+                const inclVat = item.resellerPriceExclVat != null
+                  ? Number(item.resellerPriceInclVat ?? exclVat * 1.15)
+                  : Number(item.retailPriceInclVat ?? exclVat * 1.15);
+                const setupFee = Number(item.setupFeeExclVat ?? 0);
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
+                    key={item.id}
+                    className="bg-card border border-border rounded-2xl p-6 hover:border-primary/30 hover:shadow-lg transition-all flex flex-col h-full"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-lg">
+                        <Network className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-semibold text-muted-foreground px-2.5 py-1 bg-black/5 rounded-full">{item.categoryName || "Connectivity"}</span>
+                    </div>
+                    <h3 className="text-xl font-display font-bold text-foreground mb-1">{item.name}</h3>
+                    {item.description && <p className="text-sm text-muted-foreground mb-4">{item.description}</p>}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {item.speed && (
+                        <span className="text-xs font-semibold px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                          {item.speed}
+                        </span>
+                      )}
+                      {item.provider && (
+                        <span className="text-xs font-semibold px-2 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                          {item.provider}
+                        </span>
+                      )}
+                      {item.contention && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                          {item.contention} contention
+                        </span>
+                      )}
+                      {item.contractMonths != null && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                          {item.contractMonths}m contract
+                        </span>
+                      )}
+                    </div>
+                    <div className="pt-4 border-t border-border mt-auto">
+                      <div className="flex items-baseline justify-between mb-1">
+                        <span className="text-sm text-muted-foreground">per month</span>
+                        <div className="text-right">
+                          <span className="text-2xl font-bold text-foreground">{formatZar(inclVat)}</span>
+                          <span className="text-sm text-muted-foreground ml-1">incl VAT</span>
+                        </div>
+                      </div>
+                      {setupFee > 0 && (
+                        <p className="text-xs text-muted-foreground text-right mb-3">+ {formatZar(setupFee * 1.15)} setup fee incl VAT</p>
+                      )}
+                      <button
+                        onClick={() => orderItem("service", item.id)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-md shadow-primary/20 hover:bg-primary/90 hover:-translate-y-0.5 transition-all mt-3"
                       >
                         <ShoppingCart className="w-4 h-4" /> Order
                       </button>
