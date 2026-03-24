@@ -420,12 +420,16 @@ export default function ResellerNewOrder() {
     setCart(prev => prev.filter(c => !(c.itemType === "domain" && c.name === `Domain: ${domainName}`)));
   };
 
+  // Item type buckets
+  const MONTHLY_TYPES = new Set(["service", "hosting", "did", "connectivity", "cybersecurity", "data-security", "web-development", "voip-solutions"]);
+  const ONCE_OFF_TYPES = new Set(["product", "domain"]);
+
   // Excl VAT totals are the source of truth — incl VAT is always exclVat × 1.15
-  const dueNowExclVat = cart.filter(c => c.itemType === "product" || c.itemType === "domain").reduce((sum, c) => sum + c.unitPriceExclVat * c.quantity, 0);
+  const dueNowExclVat = cart.filter(c => ONCE_OFF_TYPES.has(c.itemType)).reduce((sum, c) => sum + c.unitPriceExclVat * c.quantity, 0);
   const dueNowVat = dueNowExclVat * 0.15;
   const dueNowInclVat = dueNowExclVat + dueNowVat;
 
-  const monthlyExclVat = cart.filter(c => c.itemType === "service" || c.itemType === "hosting" || c.itemType === "did").reduce((sum, c) => sum + c.unitPriceExclVat * c.quantity, 0);
+  const monthlyExclVat = cart.filter(c => MONTHLY_TYPES.has(c.itemType)).reduce((sum, c) => sum + c.unitPriceExclVat * c.quantity, 0);
   const monthlyVat = monthlyExclVat * 0.15;
   const monthlyInclVat = monthlyExclVat + monthlyVat;
   const hasMonthly = monthlyExclVat > 0;
@@ -1632,7 +1636,7 @@ export default function ResellerNewOrder() {
             ) : (
               <div className="space-y-4">
                 {/* Monthly Recurring group */}
-                {cart.filter(i => i.itemType === "service" || i.itemType === "hosting" || i.itemType === "did").length > 0 && (
+                {cart.filter(i => MONTHLY_TYPES.has(i.itemType)).length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <div className="flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 rounded-full border border-primary/20">
@@ -1641,7 +1645,7 @@ export default function ResellerNewOrder() {
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      {cart.filter(i => i.itemType === "service" || i.itemType === "hosting" || i.itemType === "did").map(item => (
+                      {cart.filter(i => MONTHLY_TYPES.has(i.itemType)).map(item => (
                         <CartItemRow
                           key={`${item.itemType}-${item.referenceId}-${item.name}`}
                           item={item}
@@ -1655,7 +1659,7 @@ export default function ResellerNewOrder() {
                 )}
 
                 {/* Once-Off / Due Now group */}
-                {cart.filter(i => i.itemType === "product" || i.itemType === "domain").length > 0 && (
+                {cart.filter(i => ONCE_OFF_TYPES.has(i.itemType)).length > 0 && (
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <div className="flex items-center gap-1.5 px-2.5 py-1 bg-muted/40 rounded-full border border-border/60">
@@ -1664,7 +1668,7 @@ export default function ResellerNewOrder() {
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      {cart.filter(i => i.itemType === "product" || i.itemType === "domain").map(item => (
+                      {cart.filter(i => ONCE_OFF_TYPES.has(i.itemType)).map(item => (
                         <CartItemRow
                           key={`${item.itemType}-${item.referenceId}-${item.name}`}
                           item={item}
