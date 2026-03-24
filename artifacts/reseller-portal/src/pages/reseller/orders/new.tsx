@@ -206,10 +206,13 @@ export default function ResellerNewOrder() {
     setCategoryFilter("");
   }, [tab]);
 
+  // Exclude minute bundles from the main services list — they only appear inside the DID picker panel
+  const displayServices = (services as Service[]).filter(s => !isBundleService(s));
+
   // Derive the category list and filtered items for the current tab
   const currentTabItems: any[] = (() => {
     switch (tab) {
-      case "services": return services as any[];
+      case "services": return displayServices as any[];
       case "connectivity": return connectivity as any[];
       case "products": return products as any[];
       case "hosting": return hostingPackages as any[];
@@ -248,8 +251,8 @@ export default function ResellerNewOrder() {
     </div>
   );
 
-  const sortedServices = [...(services as Service[])].sort((a, b) => {
-    const rank = (s: Service) => { const n = s.name.toLowerCase(); if (/single\s*voip\s*line|voip\s*line/.test(n)) return 0; if (/hosted\s*pbx.*ext|pbx.*ext|pbx\s*extension/.test(n)) return 1; return 2; };
+  const sortedServices = [...displayServices].sort((a, b) => {
+    const rank = (s: Service) => { const n = s.name.toLowerCase(); if (/single[\s-]?line/.test(n)) return 0; if (/hosted\s*pbx.*ext|pbx.*ext|pbx\s*extension/.test(n)) return 1; return 2; };
     return rank(a) - rank(b);
   });
   const filteredServices = applyFilters(sortedServices);
@@ -293,6 +296,13 @@ export default function ResellerNewOrder() {
           : Number(item.priceInclVat ?? exclVat * 1.15);
         setCart([{ referenceId: id, itemType: "service", name: item.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 }]);
         setTab("services");
+        // Auto-open the DID picker panel if this service needs a phone number
+        if (isVoipService(item) || isSingleLineService(item)) {
+          setVoipDidPanelServiceId(id);
+          setVoipAreaCodeId(undefined);
+          setVoipSelectedDidId(null);
+          setVoipBundleServiceId(null);
+        }
       }
       setPrefillApplied(true);
     } else if (type === "product" && (products as Product[]).length > 0) {
