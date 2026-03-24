@@ -78,7 +78,12 @@ function vatPrices(item: any): { exclVat: number; inclVat: number } {
 
 function isBundleService(s: any): boolean {
   const hay = `${s.name} ${s.categoryName ?? ""}`.toLowerCase();
-  return /(local|international|extension|minute[s]?|min)\s*(bundle|pack)|min\s*pack|talktime|call\s*pack/.test(hay);
+  // Names like "Bundle 100 Minutes (Local)" have "bundle" first, qualifier after.
+  // Also catch "Extension Bundle 200 Minutes" where qualifier comes first.
+  // Require "bundle/pack" AND at least one minute/call qualifier anywhere in the string.
+  const hasBundle = /\b(bundle|pack)\b/.test(hay);
+  const hasQualifier = /(minute[s]?|\bmin\b|local|international|extension|talktime|call)/.test(hay);
+  return hasBundle && hasQualifier;
 }
 
 function isMinuteBundleVoipItem(item: any): boolean {
