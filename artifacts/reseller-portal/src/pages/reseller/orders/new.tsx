@@ -878,23 +878,30 @@ export default function ResellerNewOrder() {
                                                 No minute bundle services found. Add services with "bundle" or "minutes" in the name or category to the catalog first.
                                               </div>
                                             ) : (
-                                              <div className="relative">
-                                                <select
-                                                  value={voipBundleServiceId ?? ""}
-                                                  onChange={e => setVoipBundleServiceId(e.target.value ? parseInt(e.target.value) : null)}
-                                                  className="w-full pl-3 pr-8 py-2.5 bg-background border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/50 outline-none appearance-none cursor-pointer"
-                                                >
-                                                  <option value="">Select a minute bundle…</option>
-                                                  {bundleServices.map(b => {
-                                                    const { inclVat } = vatPrices(b as any);
-                                                    return (
-                                                      <option key={b.id} value={b.id}>
-                                                        {b.name}{(b as any).categoryName ? ` — ${(b as any).categoryName}` : ""} · {inclVat > 0 ? `R${inclVat.toFixed(2)}/month incl VAT` : ""}
-                                                      </option>
-                                                    );
-                                                  })}
-                                                </select>
-                                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                                              <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                                                {bundleServices.map(b => {
+                                                  const { exclVat: bExcl, inclVat: bIncl } = vatPrices(b as any);
+                                                  const selected = voipBundleServiceId === b.id;
+                                                  return (
+                                                    <button
+                                                      key={b.id}
+                                                      onClick={() => setVoipBundleServiceId(selected ? null : b.id)}
+                                                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all text-left ${selected ? "border-primary bg-primary/10 shadow-sm" : "bg-card border-border/60 hover:border-primary/40"}`}
+                                                    >
+                                                      <div className="flex items-center gap-2.5">
+                                                        <Phone className={`w-3.5 h-3.5 shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                                                        <div>
+                                                          <p className={`font-semibold text-sm ${selected ? "text-primary" : "text-foreground"}`}>{b.name}</p>
+                                                          {(b as any).categoryName && <p className="text-[10px] text-muted-foreground">{(b as any).categoryName}</p>}
+                                                        </div>
+                                                      </div>
+                                                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                                                        <span className={`text-xs font-bold ${selected ? "text-primary" : "text-foreground"}`}>{formatZar(bIncl)}<span className="font-normal text-muted-foreground">/mo</span></span>
+                                                        {selected && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                                                      </div>
+                                                    </button>
+                                                  );
+                                                })}
                                               </div>
                                             )}
                                           </div>
@@ -1806,23 +1813,30 @@ export default function ResellerNewOrder() {
                                               No minute bundle services found. Add services with "bundle" or "minutes" in the name or category.
                                             </div>
                                           ) : (
-                                            <div className="relative">
-                                              <select
-                                                value={voipBundleServiceId ?? ""}
-                                                onChange={e => setVoipBundleServiceId(e.target.value ? parseInt(e.target.value) : null)}
-                                                className="w-full pl-3 pr-8 py-2.5 bg-background border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/50 outline-none appearance-none cursor-pointer"
-                                              >
-                                                <option value="">Select a minute bundle…</option>
-                                                {bundleServices.map(b => {
-                                                  const { inclVat: bIncl } = vatPrices(b as any);
-                                                  return (
-                                                    <option key={b.id} value={b.id}>
-                                                      {b.name}{(b as any).categoryName ? ` — ${(b as any).categoryName}` : ""} · {bIncl > 0 ? `R${bIncl.toFixed(2)}/month incl VAT` : ""}
-                                                    </option>
-                                                  );
-                                                })}
-                                              </select>
-                                              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                                            <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                                              {bundleServices.map(b => {
+                                                const { inclVat: bIncl } = vatPrices(b as any);
+                                                const selected = voipBundleServiceId === b.id;
+                                                return (
+                                                  <button
+                                                    key={b.id}
+                                                    onClick={() => setVoipBundleServiceId(selected ? null : b.id)}
+                                                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all text-left ${selected ? "border-primary bg-primary/10 shadow-sm" : "bg-card border-border/60 hover:border-primary/40"}`}
+                                                  >
+                                                    <div className="flex items-center gap-2.5">
+                                                      <Phone className={`w-3.5 h-3.5 shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                                                      <div>
+                                                        <p className={`font-semibold text-sm ${selected ? "text-primary" : "text-foreground"}`}>{b.name}</p>
+                                                        {(b as any).categoryName && <p className="text-[10px] text-muted-foreground">{(b as any).categoryName}</p>}
+                                                      </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                                                      <span className={`text-xs font-bold ${selected ? "text-primary" : "text-foreground"}`}>{formatZar(bIncl)}<span className="font-normal text-muted-foreground">/mo</span></span>
+                                                      {selected && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                                                    </div>
+                                                  </button>
+                                                );
+                                              })}
                                             </div>
                                           )}
                                         </div>
