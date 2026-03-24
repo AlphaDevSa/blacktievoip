@@ -133,7 +133,7 @@ export default function ResellerCatalog() {
   );
 
   const tabs: { id: Tab; label: string; icon: React.ElementType; count: number }[] = [
-    { id: "services",        label: "VoIP Services",   icon: Server,  count: services.length },
+    { id: "services",        label: "Services",        icon: Server,  count: services.length },
     { id: "connectivity",    label: "Connectivity",    icon: Network, count: connectivityItems.length },
     { id: "products",        label: "Hardware",        icon: Package, count: products.length },
     { id: "hosting",         label: "Web Hosting",     icon: Globe,   count: hostingPackages.length },
