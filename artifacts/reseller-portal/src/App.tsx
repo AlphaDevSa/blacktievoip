@@ -21,6 +21,10 @@ import AdminWebHostingCatalog from "@/pages/admin/catalog/hosting";
 import AdminDomainsCatalog from "@/pages/admin/catalog/domains";
 import AdminCategories from "@/pages/admin/catalog/categories";
 import AdminConnectivityCatalog from "@/pages/admin/catalog/connectivity";
+import AdminCybersecurityCatalog from "@/pages/admin/catalog/cybersecurity";
+import AdminDataSecurityCatalog from "@/pages/admin/catalog/data-security";
+import AdminWebDevCatalog from "@/pages/admin/catalog/web-dev";
+import AdminVoipSolutionsCatalog from "@/pages/admin/catalog/voip-solutions";
 import AdminDidManager from "@/pages/admin/dids/index";
 import AdminOrders from "@/pages/admin/orders/index";
 
@@ -152,6 +156,18 @@ function Router() {
       </Route>
       <Route path="/admin/domains-catalog">
         {() => <ProtectedRoute role="admin" component={AdminDomainsCatalog} />}
+      </Route>
+      <Route path="/admin/cybersecurity-catalog">
+        {() => <ProtectedRoute role="admin" component={AdminCybersecurityCatalog} />}
+      </Route>
+      <Route path="/admin/data-security-catalog">
+        {() => <ProtectedRoute role="admin" component={AdminDataSecurityCatalog} />}
+      </Route>
+      <Route path="/admin/web-dev-catalog">
+        {() => <ProtectedRoute role="admin" component={AdminWebDevCatalog} />}
+      </Route>
+      <Route path="/admin/voip-solutions-catalog">
+        {() => <ProtectedRoute role="admin" component={AdminVoipSolutionsCatalog} />}
       </Route>
       <Route path="/admin/did-manager">
         {() => <ProtectedRoute role="admin" component={AdminDidManager} />}

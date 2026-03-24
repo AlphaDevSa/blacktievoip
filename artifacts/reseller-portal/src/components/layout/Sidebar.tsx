@@ -24,6 +24,9 @@ import {
   FolderTree,
   BarChart3,
   ClipboardList,
+  Shield,
+  Lock,
+  Phone,
 } from "lucide-react";
 import { useGetMe, useLogout } from "@workspace/api-client-react";
 
@@ -66,6 +69,10 @@ export function Sidebar({ role }: SidebarProps) {
     { type: "link", href: "/admin/connectivity-catalog", label: "Connectivity", icon: Wifi },
     { type: "link", href: "/admin/hosting-catalog", label: "Web Hosting", icon: Globe },
     { type: "link", href: "/admin/domains-catalog", label: "Domains", icon: Tag },
+    { type: "link", href: "/admin/cybersecurity-catalog", label: "Cybersecurity", icon: Shield },
+    { type: "link", href: "/admin/data-security-catalog", label: "Data Security", icon: Lock },
+    { type: "link", href: "/admin/web-dev-catalog", label: "Web Development", icon: Globe },
+    { type: "link", href: "/admin/voip-solutions-catalog", label: "VoIP Solutions", icon: Phone },
     { type: "section", label: "Operations" },
     { type: "link", href: "/admin/did-manager", label: "DID Manager", icon: PhoneCall },
     { type: "link", href: "/admin/orders", label: "Orders", icon: ShoppingCart },

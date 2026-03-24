@@ -6,6 +6,10 @@ import {
   useGetCatalogHostingPackages,
   useGetCatalogDomainTlds,
   useGetCatalogConnectivity,
+  useGetCatalogCybersecurity,
+  useGetCatalogDataSecurity,
+  useGetCatalogWebDevelopment,
+  useGetCatalogVoipSolutions,
   Service,
   Product,
   HostingPackage,
@@ -13,7 +17,7 @@ import {
   ConnectivityItem,
 } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Server, Package, Search, Globe, HardDrive, Mail, Database, Shield, Wifi, Tag, Calendar, CheckCircle2, XCircle, Loader2, AlertCircle, ShoppingCart, Network, ChevronDown } from "lucide-react";
+import { Server, Package, Search, Globe, HardDrive, Mail, Database, Shield, Wifi, Tag, Calendar, CheckCircle2, XCircle, Loader2, AlertCircle, ShoppingCart, Network, ChevronDown, Lock, Phone } from "lucide-react";
 import { formatZar } from "@/lib/utils";
 import { useLocation } from "wouter";
 
@@ -24,7 +28,7 @@ type DomainCheckResult = {
   nameservers?: string[];
 };
 
-type Tab = "services" | "products" | "hosting" | "domains" | "connectivity";
+type Tab = "services" | "products" | "hosting" | "domains" | "connectivity" | "cybersecurity" | "data-security" | "web-development" | "voip-solutions";
 
 function vatPrices(item: {
   price?: number | null;
@@ -76,6 +80,10 @@ export default function ResellerCatalog() {
   const { data: hostingPackages = [], isLoading: loadingH } = useGetCatalogHostingPackages();
   const { data: domainTlds = [], isLoading: loadingD } = useGetCatalogDomainTlds();
   const { data: connectivityItems = [], isLoading: loadingC } = useGetCatalogConnectivity();
+  const { data: cybersecurityItems = [], isLoading: loadingCyber } = useGetCatalogCybersecurity();
+  const { data: dataSecurityItems = [], isLoading: loadingDS } = useGetCatalogDataSecurity();
+  const { data: webDevItems = [], isLoading: loadingWD } = useGetCatalogWebDevelopment();
+  const { data: voipItems = [], isLoading: loadingVoip } = useGetCatalogVoipSolutions();
 
   async function handleDomainCheck(e: React.FormEvent) {
     e.preventDefault();
@@ -121,6 +129,22 @@ export default function ResellerCatalog() {
     (c.provider && c.provider.toLowerCase().includes(search.toLowerCase())) ||
     (c.speed && c.speed.toLowerCase().includes(search.toLowerCase()))
   );
+  const filteredCybersecurity = (cybersecurityItems as Service[]).filter(s =>
+    s.name.toLowerCase().includes(search.toLowerCase()) ||
+    (s.description && s.description.toLowerCase().includes(search.toLowerCase()))
+  );
+  const filteredDataSecurity = (dataSecurityItems as Service[]).filter(s =>
+    s.name.toLowerCase().includes(search.toLowerCase()) ||
+    (s.description && s.description.toLowerCase().includes(search.toLowerCase()))
+  );
+  const filteredWebDev = (webDevItems as Service[]).filter(s =>
+    s.name.toLowerCase().includes(search.toLowerCase()) ||
+    (s.description && s.description.toLowerCase().includes(search.toLowerCase()))
+  );
+  const filteredVoip = (voipItems as Service[]).filter(s =>
+    s.name.toLowerCase().includes(search.toLowerCase()) ||
+    (s.description && s.description.toLowerCase().includes(search.toLowerCase()))
+  );
 
   const tabs: { id: Tab; label: string; icon: React.ElementType; count: number }[] = [
     { id: "services", label: "VoIP Services", icon: Server, count: services.length },
@@ -128,12 +152,20 @@ export default function ResellerCatalog() {
     { id: "products", label: "Hardware", icon: Package, count: products.length },
     { id: "hosting", label: "Web Hosting", icon: Globe, count: hostingPackages.length },
     { id: "domains", label: "Domains", icon: Tag, count: domainTlds.length },
+    { id: "cybersecurity", label: "Cybersecurity", icon: Shield, count: cybersecurityItems.length },
+    { id: "data-security", label: "Data Security", icon: Lock, count: dataSecurityItems.length },
+    { id: "web-development", label: "Web Development", icon: Globe, count: webDevItems.length },
+    { id: "voip-solutions", label: "VoIP Solutions", icon: Phone, count: voipItems.length },
   ];
 
   const isLoading = activeTab === "services" ? loadingS
     : activeTab === "products" ? loadingP
     : activeTab === "hosting" ? loadingH
     : activeTab === "connectivity" ? loadingC
+    : activeTab === "cybersecurity" ? loadingCyber
+    : activeTab === "data-security" ? loadingDS
+    : activeTab === "web-development" ? loadingWD
+    : activeTab === "voip-solutions" ? loadingVoip
     : loadingD;
 
   return (
@@ -353,6 +385,78 @@ export default function ResellerCatalog() {
                         <ShoppingCart className="w-4 h-4" /> Order
                       </button>
                     </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )
+        ) : activeTab === "cybersecurity" ? (
+          filteredCybersecurity.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-muted-foreground"><Shield className="w-12 h-12 opacity-20 mb-3" /><p className="font-medium">No cybersecurity items available</p></div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredCybersecurity.map((item: Service, idx) => {
+                const { inclVat } = vatPrices(item as any);
+                return (
+                  <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} key={item.id} className="bg-card border border-border rounded-2xl p-6 hover:border-primary/30 hover:shadow-lg transition-all flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-4"><div className="p-2.5 bg-blue-500/10 text-blue-400 rounded-lg"><Shield className="w-5 h-5" /></div><span className="text-xs font-semibold text-muted-foreground px-2.5 py-1 bg-black/5 rounded-full">{(item as any).categoryName || "Cybersecurity"}</span></div>
+                    <h3 className="text-xl font-display font-bold text-foreground mb-2">{item.name}</h3>
+                    <p className="text-sm text-muted-foreground flex-1 mb-6">{item.description || "No description provided."}</p>
+                    <div className="pt-4 border-t border-border mt-auto"><div className="flex items-baseline justify-between mb-3"><span className="text-sm text-muted-foreground">Pricing</span><div className="text-right"><span className="text-2xl font-bold text-foreground">{formatZar(inclVat)}</span><span className="text-sm text-muted-foreground ml-1">/{item.unit} incl VAT</span></div></div></div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )
+        ) : activeTab === "data-security" ? (
+          filteredDataSecurity.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-muted-foreground"><Lock className="w-12 h-12 opacity-20 mb-3" /><p className="font-medium">No data security items available</p></div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredDataSecurity.map((item: Service, idx) => {
+                const { inclVat } = vatPrices(item as any);
+                return (
+                  <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} key={item.id} className="bg-card border border-border rounded-2xl p-6 hover:border-primary/30 hover:shadow-lg transition-all flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-4"><div className="p-2.5 bg-violet-500/10 text-violet-400 rounded-lg"><Lock className="w-5 h-5" /></div><span className="text-xs font-semibold text-muted-foreground px-2.5 py-1 bg-black/5 rounded-full">{(item as any).categoryName || "Data Security"}</span></div>
+                    <h3 className="text-xl font-display font-bold text-foreground mb-2">{item.name}</h3>
+                    <p className="text-sm text-muted-foreground flex-1 mb-6">{item.description || "No description provided."}</p>
+                    <div className="pt-4 border-t border-border mt-auto"><div className="flex items-baseline justify-between mb-3"><span className="text-sm text-muted-foreground">Pricing</span><div className="text-right"><span className="text-2xl font-bold text-foreground">{formatZar(inclVat)}</span><span className="text-sm text-muted-foreground ml-1">/{item.unit} incl VAT</span></div></div></div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )
+        ) : activeTab === "web-development" ? (
+          filteredWebDev.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-muted-foreground"><Globe className="w-12 h-12 opacity-20 mb-3" /><p className="font-medium">No web development items available</p></div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredWebDev.map((item: Service, idx) => {
+                const { inclVat } = vatPrices(item as any);
+                return (
+                  <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} key={item.id} className="bg-card border border-border rounded-2xl p-6 hover:border-primary/30 hover:shadow-lg transition-all flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-4"><div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-lg"><Globe className="w-5 h-5" /></div><span className="text-xs font-semibold text-muted-foreground px-2.5 py-1 bg-black/5 rounded-full">{(item as any).categoryName || "Web Development"}</span></div>
+                    <h3 className="text-xl font-display font-bold text-foreground mb-2">{item.name}</h3>
+                    <p className="text-sm text-muted-foreground flex-1 mb-6">{item.description || "No description provided."}</p>
+                    <div className="pt-4 border-t border-border mt-auto"><div className="flex items-baseline justify-between mb-3"><span className="text-sm text-muted-foreground">Pricing</span><div className="text-right"><span className="text-2xl font-bold text-foreground">{formatZar(inclVat)}</span><span className="text-sm text-muted-foreground ml-1">/{item.unit} incl VAT</span></div></div></div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )
+        ) : activeTab === "voip-solutions" ? (
+          filteredVoip.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-muted-foreground"><Phone className="w-12 h-12 opacity-20 mb-3" /><p className="font-medium">No VoIP solutions available</p></div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredVoip.map((item: Service, idx) => {
+                const { inclVat } = vatPrices(item as any);
+                return (
+                  <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} key={item.id} className="bg-card border border-border rounded-2xl p-6 hover:border-primary/30 hover:shadow-lg transition-all flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-4"><div className="p-2.5 bg-orange-500/10 text-orange-400 rounded-lg"><Phone className="w-5 h-5" /></div><span className="text-xs font-semibold text-muted-foreground px-2.5 py-1 bg-black/5 rounded-full">{(item as any).categoryName || "VoIP Solutions"}</span></div>
+                    <h3 className="text-xl font-display font-bold text-foreground mb-2">{item.name}</h3>
+                    <p className="text-sm text-muted-foreground flex-1 mb-6">{item.description || "No description provided."}</p>
+                    <div className="pt-4 border-t border-border mt-auto"><div className="flex items-baseline justify-between mb-3"><span className="text-sm text-muted-foreground">Pricing</span><div className="text-right"><span className="text-2xl font-bold text-foreground">{formatZar(inclVat)}</span><span className="text-sm text-muted-foreground ml-1">/{item.unit} incl VAT</span></div></div></div>
                   </motion.div>
                 );
               })}
