@@ -159,7 +159,7 @@ export default function NewOrder() {
   const params = new URLSearchParams(searchString);
 
   // ── Catalog data ──
-  const { data: services = [], isLoading: servicesLoading } = useGetCatalogServices(FRESH);
+  const { data: services = [] } = useGetCatalogServices(FRESH);
   const { data: products = [] } = useGetCatalogProducts(FRESH);
   const { data: hostingPackages = [] } = useGetCatalogHostingPackages(FRESH);
   const { data: domainTlds = [] } = useGetCatalogDomainTlds(FRESH);
@@ -167,8 +167,9 @@ export default function NewOrder() {
   const { data: cybersecurity = [] } = useGetCatalogCybersecurity(FRESH);
   const { data: dataSecurity = [] } = useGetCatalogDataSecurity(FRESH);
   const { data: webDevelopment = [] } = useGetCatalogWebDevelopment(FRESH);
-  const { data: rawVoipSolutions = [] } = useGetCatalogVoipSolutions(FRESH);
+  const { data: rawVoipSolutions = [], isLoading: voipLoading } = useGetCatalogVoipSolutions(FRESH);
   const voipSolutions = (rawVoipSolutions as any[]).filter(i => !isMinuteBundleVoipItem(i));
+  const voipBundles  = (rawVoipSolutions as any[]).filter(isMinuteBundleVoipItem);
 
   const { data: areaCodes = [] } = useResellerGetAreaCodes(FRESH);
   const { data: clients = [] } = useQuery({
@@ -212,7 +213,6 @@ export default function NewOrder() {
 
   // ── Derived catalog lists ──
   const displayServices = (services as Service[]).filter(s => !isBundleService(s));
-  const bundleServices = (services as Service[]).filter(isBundleService);
 
   function applyFilters<T extends { name: string; categoryName?: string | null; description?: string | null }>(items: T[]): T[] {
     return items.filter(i => {
@@ -292,10 +292,10 @@ export default function NewOrder() {
     if (!did) return;
     addToCart({ referenceId: did.id, itemType: "did", name: `DID: ${did.number}`, unitPriceExclVat: 0, unitPriceInclVat: 0, quantity: 1 });
     if (voipBundleServiceId) {
-      const bundle = bundleServices.find(b => b.id === voipBundleServiceId);
+      const bundle = voipBundles.find((b: any) => b.id === voipBundleServiceId);
       if (bundle) {
         const { exclVat, inclVat } = vatPrices(bundle);
-        addToCart({ referenceId: bundle.id, itemType: "service", name: bundle.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 });
+        addToCart({ referenceId: bundle.id, itemType: "voip-solutions", name: bundle.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 });
       }
     }
     closeDIDPanel();
@@ -604,16 +604,16 @@ export default function NewOrder() {
                                 <Phone className="w-3.5 h-3.5" /> 3. Minute Bundle
                                 <span className="font-normal text-muted-foreground normal-case ml-1">— optional</span>
                               </p>
-                              {servicesLoading ? (
+                              {voipLoading ? (
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
                                   <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading bundles…
                                 </div>
-                              ) : bundleServices.length === 0 ? (
-                                <p className="text-xs text-muted-foreground">No minute bundles configured.</p>
+                              ) : voipBundles.length === 0 ? (
+                                <p className="text-xs text-muted-foreground">No minute bundles available.</p>
                               ) : (
                                 <div className="space-y-1">
-                                  {bundleServices.map(b => {
-                                    const { exclVat: bExcl, inclVat: bIncl } = vatPrices(b as any);
+                                  {voipBundles.map((b: any) => {
+                                    const { exclVat: bExcl, inclVat: bIncl } = vatPrices(b);
                                     const sel = voipBundleServiceId === b.id;
                                     return (
                                       <button
