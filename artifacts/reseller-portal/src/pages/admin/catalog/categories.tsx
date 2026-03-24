@@ -152,8 +152,21 @@ export default function AdminCategories() {
     return TABS.find(t => t.id === activeTab)?.queryKey ?? "";
   }
 
+  const CROSS_KEYS: Record<CatalogType, { adminItems: string; publicCatalog: string }> = {
+    "service":         { adminItems: "/api/admin/services",           publicCatalog: "/api/catalog/services" },
+    "product":         { adminItems: "/api/admin/products",           publicCatalog: "/api/catalog/products" },
+    "connectivity":    { adminItems: "/api/admin/connectivity-items", publicCatalog: "/api/catalog/connectivity" },
+    "cybersecurity":   { adminItems: "/api/admin/cybersecurity-items",publicCatalog: "/api/catalog/cybersecurity" },
+    "data-security":   { adminItems: "/api/admin/data-security-items",publicCatalog: "/api/catalog/data-security" },
+    "web-development": { adminItems: "/api/admin/web-dev-items",      publicCatalog: "/api/catalog/web-development" },
+    "voip-solutions":  { adminItems: "/api/admin/voip-items",         publicCatalog: "/api/catalog/voip-solutions" },
+  };
+
   function invalidate() {
+    const { adminItems, publicCatalog } = CROSS_KEYS[activeTab];
     queryClient.invalidateQueries({ queryKey: [getQueryKey()] });
+    queryClient.invalidateQueries({ queryKey: [adminItems] });
+    queryClient.invalidateQueries({ queryKey: [publicCatalog] });
   }
 
   function openCreate(parentId?: number) {

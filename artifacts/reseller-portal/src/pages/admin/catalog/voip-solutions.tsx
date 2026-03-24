@@ -76,6 +76,7 @@ export default function AdminVoipSolutionsCatalog() {
       if (editingCat) { await updateCat.mutateAsync({ id: editingCat.id, data: payload }); toast({ title: `"${payload.name}" updated` }); }
       else { await createCat.mutateAsync({ data: payload }); toast({ title: `"${payload.name}" created` }); }
       queryClient.invalidateQueries({ queryKey: ["/api/admin/voip-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/voip-solutions"] });
       setIsCatModalOpen(false);
     } catch { toast({ title: "Failed to save category", variant: "destructive" }); }
   }
@@ -84,7 +85,7 @@ export default function AdminVoipSolutionsCatalog() {
     if ((categories as Category[]).some(c => c.parentId === cat.id)) { toast({ title: "Remove sub-categories first", variant: "destructive" }); return; }
     if (items.some(s => s.categoryId === cat.id)) { toast({ title: "Reassign items before deleting", variant: "destructive" }); return; }
     if (!confirm(`Delete "${cat.name}"?`)) return;
-    try { await deleteCat.mutateAsync({ id: cat.id }); toast({ title: `"${cat.name}" deleted` }); queryClient.invalidateQueries({ queryKey: ["/api/admin/voip-categories"] }); if (selectedCatId === cat.id) setSelectedCatId(null); }
+    try { await deleteCat.mutateAsync({ id: cat.id }); toast({ title: `"${cat.name}" deleted` }); queryClient.invalidateQueries({ queryKey: ["/api/admin/voip-categories"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/voip-solutions"] }); if (selectedCatId === cat.id) setSelectedCatId(null); }
     catch { toast({ title: "Failed to delete", variant: "destructive" }); }
   }
 
@@ -103,13 +104,13 @@ export default function AdminVoipSolutionsCatalog() {
       else { await createItem.mutateAsync({ data: payload }); toast({ title: "Item created" }); }
       setIsItemModalOpen(false); setEditingItem(null);
       setItemForm({ name: "", description: "", categoryId: "", retailPriceExclVat: "", resellerPriceExclVat: "", resellerPriceInclVat: "", priceInclVat: "", unit: "month", status: "active" });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/voip-items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/voip-items"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/voip-solutions"] });
     } catch (err: unknown) { const msg = err instanceof Error ? err.message.replace(/^HTTP \d+[^:]*:\s*/, "") : "Unknown error"; toast({ title: editingItem ? "Error updating" : "Error creating", description: msg, variant: "destructive" }); }
   };
 
   const handleDeleteItem = async (id: number) => {
     if (confirm("Delete this item?")) {
-      try { await deleteItem.mutateAsync({ id }); toast({ title: "Item deleted" }); queryClient.invalidateQueries({ queryKey: ["/api/admin/voip-items"] }); }
+      try { await deleteItem.mutateAsync({ id }); toast({ title: "Item deleted" }); queryClient.invalidateQueries({ queryKey: ["/api/admin/voip-items"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/voip-solutions"] }); }
       catch (err: unknown) { const msg = err instanceof Error ? err.message.replace(/^HTTP \d+[^:]*:\s*/, "") : "Unknown error"; toast({ title: "Error deleting", description: msg, variant: "destructive" }); }
     }
   };

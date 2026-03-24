@@ -137,6 +137,7 @@ export default function AdminProductsCatalog() {
         toast({ title: `"${payload.name}" created` });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/admin/product-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/products"] });
       setIsCatModalOpen(false);
     } catch { toast({ title: "Failed to save category", variant: "destructive" }); }
   }
@@ -149,6 +150,7 @@ export default function AdminProductsCatalog() {
       await deleteCat.mutateAsync({ id: cat.id });
       toast({ title: `"${cat.name}" deleted` });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/product-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/products"] });
       if (selectedCatId === cat.id) setSelectedCatId(null);
     } catch { toast({ title: "Failed to delete", variant: "destructive" }); }
   }
@@ -186,6 +188,7 @@ export default function AdminProductsCatalog() {
       setEditingProduct(null);
       setProductForm(emptyProductForm);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/catalog/products"] });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message.replace(/^HTTP \d+[^:]*:\s*/, "") : "Unknown error";
       toast({ title: editingProduct ? "Error updating product" : "Error creating product", description: msg, variant: "destructive" });
@@ -198,6 +201,7 @@ export default function AdminProductsCatalog() {
         await deleteProduct.mutateAsync({ id });
         toast({ title: "Product deleted" });
         queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/catalog/products"] });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message.replace(/^HTTP \d+[^:]*:\s*/, "") : "Unknown error";
         toast({ title: "Error deleting product", description: msg, variant: "destructive" });

@@ -84,6 +84,7 @@ export default function AdminCybersecurityCatalog() {
       if (editingCat) { await updateCat.mutateAsync({ id: editingCat.id, data: payload }); toast({ title: `"${payload.name}" updated` }); }
       else { await createCat.mutateAsync({ data: payload }); toast({ title: `"${payload.name}" created` }); }
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cybersecurity-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/cybersecurity"] });
       setIsCatModalOpen(false);
     } catch { toast({ title: "Failed to save category", variant: "destructive" }); }
   }
@@ -96,6 +97,7 @@ export default function AdminCybersecurityCatalog() {
       await deleteCat.mutateAsync({ id: cat.id });
       toast({ title: `"${cat.name}" deleted` });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cybersecurity-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/cybersecurity"] });
       if (selectedCatId === cat.id) setSelectedCatId(null);
     } catch { toast({ title: "Failed to delete", variant: "destructive" }); }
   }
@@ -116,6 +118,7 @@ export default function AdminCybersecurityCatalog() {
       setIsItemModalOpen(false); setEditingItem(null);
       setItemForm({ name: "", description: "", categoryId: "", retailPriceExclVat: "", resellerPriceExclVat: "", resellerPriceInclVat: "", priceInclVat: "", unit: "month", status: "active" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/cybersecurity-items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/catalog/cybersecurity"] });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message.replace(/^HTTP \d+[^:]*:\s*/, "") : "Unknown error";
       toast({ title: editingItem ? "Error updating item" : "Error creating item", description: msg, variant: "destructive" });
@@ -124,7 +127,7 @@ export default function AdminCybersecurityCatalog() {
 
   const handleDeleteItem = async (id: number) => {
     if (confirm("Delete this item?")) {
-      try { await deleteItem.mutateAsync({ id }); toast({ title: "Item deleted" }); queryClient.invalidateQueries({ queryKey: ["/api/admin/cybersecurity-items"] }); }
+      try { await deleteItem.mutateAsync({ id }); toast({ title: "Item deleted" }); queryClient.invalidateQueries({ queryKey: ["/api/admin/cybersecurity-items"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/cybersecurity"] }); }
       catch (err: unknown) { const msg = err instanceof Error ? err.message.replace(/^HTTP \d+[^:]*:\s*/, "") : "Unknown error"; toast({ title: "Error deleting item", description: msg, variant: "destructive" }); }
     }
   };
