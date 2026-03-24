@@ -25,7 +25,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Minus, Trash2, ShoppingCart, Server, Package, Phone, CheckCircle2,
   MapPin, Globe, HardDrive, Mail, Database, Shield, Wifi, Search, X, Loader2, Tag, Calendar, User,
-  ChevronDown, Network, Lock, Code,
+  ChevronDown, Network, Lock, Code, ArrowRight,
 } from "lucide-react";
 import { formatZar } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -261,6 +261,13 @@ export default function ResellerNewOrder() {
   const [voipSelectedDidId, setVoipSelectedDidId] = useState<number | null>(null);
   const [voipBundleServiceId, setVoipBundleServiceId] = useState<number | null>(null);
 
+  // Hosting domain panel state
+  const [hostingPanelPkgId, setHostingPanelPkgId] = useState<number | null>(null);
+  const [hostingDomainMode, setHostingDomainMode] = useState<"register" | "transfer" | null>(null);
+  const [hostingDomainInput, setHostingDomainInput] = useState("");
+  const [hostingDomainQuery, setHostingDomainQuery] = useState("");
+  const [hostingEppCode, setHostingEppCode] = useState("");
+
   // Pre-populate cart from ?add=type:id param once catalog data has loaded
   useEffect(() => {
     if (prefillApplied) return;
@@ -329,6 +336,20 @@ export default function ResellerNewOrder() {
     { areaCodeId: voipAreaCodeId! },
     { query: { enabled: !!voipAreaCodeId } }
   );
+
+  // Domain availability check scoped to the hosting panel
+  const hostingDomainCheck = useResellerCheckDomain(
+    { domain: hostingDomainQuery },
+    { query: { enabled: !!hostingDomainQuery, staleTime: 30000 } }
+  );
+
+  const resetHostingPanel = () => {
+    setHostingPanelPkgId(null);
+    setHostingDomainMode(null);
+    setHostingDomainInput("");
+    setHostingDomainQuery("");
+    setHostingEppCode("");
+  };
 
   // Find the TLD price for a given domain name
   const getTldPricing = (domain: string): DomainTld | null => {
@@ -982,38 +1003,238 @@ export default function ResellerNewOrder() {
                   : filteredHosting.map((pkg: HostingPackage) => {
                     const inCart = cartQtyOf(pkg.id, "hosting");
                     const { exclVat, inclVat } = vatPrices(pkg as any);
+                    const panelOpen = hostingPanelPkgId === pkg.id;
                     return (
-                      <div key={pkg.id} className="p-4 rounded-xl bg-muted/10 border border-border/50 hover:border-primary/30 transition-colors">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-start gap-3 flex-1 min-w-0">
-                            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5"><Globe className="w-4 h-4 text-primary" /></div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-foreground text-sm">{pkg.name}</p>
-                              {pkg.description && <p className="text-xs text-muted-foreground mt-0.5">{pkg.description}</p>}
-                              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
-                                <span className="text-xs text-muted-foreground flex items-center gap-1"><HardDrive className="w-3 h-3 text-primary/60" />{pkg.diskSpaceGb}GB</span>
-                                <span className="text-xs text-muted-foreground flex items-center gap-1"><Wifi className="w-3 h-3 text-primary/60" />{pkg.bandwidthGb}GB BW</span>
-                                <span className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3 text-primary/60" />{pkg.emailAccounts} Email</span>
-                                <span className="text-xs text-muted-foreground flex items-center gap-1"><Database className="w-3 h-3 text-primary/60" />{pkg.databases} DB</span>
-                                {pkg.sslIncluded && <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><Shield className="w-3 h-3" />SSL</span>}
+                      <div key={pkg.id} className={`rounded-xl border transition-colors ${panelOpen ? "border-primary/40 bg-primary/5" : "bg-muted/10 border-border/50 hover:border-primary/30"}`}>
+                        {/* ── Package header ── */}
+                        <div className="p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3 flex-1 min-w-0">
+                              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5"><Globe className="w-4 h-4 text-primary" /></div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-foreground text-sm">{pkg.name}</p>
+                                {pkg.description && <p className="text-xs text-muted-foreground mt-0.5">{pkg.description}</p>}
+                                <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1"><HardDrive className="w-3 h-3 text-primary/60" />{pkg.diskSpaceGb}GB</span>
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1"><Wifi className="w-3 h-3 text-primary/60" />{pkg.bandwidthGb}GB BW</span>
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3 text-primary/60" />{pkg.emailAccounts} Email</span>
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1"><Database className="w-3 h-3 text-primary/60" />{pkg.databases} DB</span>
+                                  {pkg.sslIncluded && <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><Shield className="w-3 h-3" />SSL</span>}
+                                </div>
+                                <p className="text-xs text-primary font-semibold mt-1">{formatZar(inclVat)} <span className="text-muted-foreground font-normal">/month incl VAT</span></p>
                               </div>
-                              <p className="text-xs text-primary font-semibold mt-1">{formatZar(inclVat)} <span className="text-muted-foreground font-normal">/month incl VAT</span></p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {inCart > 0 ? (
+                                <>
+                                  <div className="flex items-center gap-1">
+                                    <button onClick={() => updateQty(pkg.id, "hosting", -1)} className="w-7 h-7 rounded-lg bg-black/[0.07] hover:bg-black/[0.08] flex items-center justify-center transition-colors"><Minus className="w-3 h-3" /></button>
+                                    <span className="w-6 text-center text-sm font-bold text-foreground">{inCart}</span>
+                                    <button onClick={() => updateQty(pkg.id, "hosting", 1)} className="w-7 h-7 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary flex items-center justify-center transition-colors"><Plus className="w-3 h-3" /></button>
+                                  </div>
+                                  <button
+                                    onClick={() => { setHostingPanelPkgId(panelOpen ? null : pkg.id); if (!panelOpen) { setHostingDomainMode(null); setHostingDomainInput(""); setHostingDomainQuery(""); setHostingEppCode(""); } }}
+                                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${panelOpen ? "bg-primary/20 text-primary" : "bg-muted/50 text-muted-foreground hover:bg-primary/10 hover:text-primary"}`}
+                                  >
+                                    <Globe className="w-3.5 h-3.5" /> Domain
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    addToCart({ referenceId: pkg.id, itemType: "hosting", name: pkg.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 });
+                                    setHostingPanelPkgId(pkg.id);
+                                    setHostingDomainMode(null);
+                                    setHostingDomainInput("");
+                                    setHostingDomainQuery("");
+                                    setHostingEppCode("");
+                                  }}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+                                >
+                                  <Plus className="w-3.5 h-3.5" /> Add
+                                </button>
+                              )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {inCart > 0 ? (
-                              <div className="flex items-center gap-1">
-                                <button onClick={() => updateQty(pkg.id, "hosting", -1)} className="w-7 h-7 rounded-lg bg-black/[0.07] hover:bg-black/[0.08] flex items-center justify-center transition-colors"><Minus className="w-3 h-3" /></button>
-                                <span className="w-6 text-center text-sm font-bold text-foreground">{inCart}</span>
-                                <button onClick={() => updateQty(pkg.id, "hosting", 1)} className="w-7 h-7 rounded-lg bg-primary/20 hover:bg-primary/30 text-primary flex items-center justify-center transition-colors"><Plus className="w-3 h-3" /></button>
-                              </div>
-                            ) : (
-                              <button onClick={() => addToCart({ referenceId: pkg.id, itemType: "hosting", name: pkg.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors">
-                                <Plus className="w-3.5 h-3.5" /> Add
-                              </button>
-                            )}
-                          </div>
                         </div>
+
+                        {/* ── Domain panel ── */}
+                        <AnimatePresence>
+                          {panelOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden border-t border-primary/20"
+                            >
+                              <div className="p-4 space-y-4 bg-background/50">
+
+                                {!hostingDomainMode ? (
+                                  /* ── Mode picker ── */
+                                  <div className="space-y-3">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                                      <Globe className="w-3.5 h-3.5 text-primary" /> Add a Domain to this Hosting Plan
+                                    </p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <button
+                                        onClick={() => { setHostingDomainMode("register"); setHostingDomainInput(""); setHostingDomainQuery(""); }}
+                                        className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 hover:border-primary/60 hover:bg-primary/10 transition-all text-left"
+                                      >
+                                        <Search className="w-5 h-5 text-primary" />
+                                        <div>
+                                          <p className="text-xs font-bold text-foreground">Register New Domain</p>
+                                          <p className="text-[10px] text-muted-foreground mt-0.5">Check availability &amp; register</p>
+                                        </div>
+                                      </button>
+                                      <button
+                                        onClick={() => { setHostingDomainMode("transfer"); setHostingDomainInput(""); setHostingEppCode(""); }}
+                                        className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-border/60 bg-muted/20 hover:border-primary/40 hover:bg-primary/5 transition-all text-left"
+                                      >
+                                        <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                                        <div>
+                                          <p className="text-xs font-bold text-foreground">Transfer Domain</p>
+                                          <p className="text-[10px] text-muted-foreground mt-0.5">Move from another registrar</p>
+                                        </div>
+                                      </button>
+                                    </div>
+                                    <button onClick={resetHostingPanel} className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1">
+                                      Skip — hosting added, no domain needed
+                                    </button>
+                                  </div>
+
+                                ) : hostingDomainMode === "register" ? (
+                                  /* ── Register new domain ── */
+                                  <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                      <button onClick={() => setHostingDomainMode(null)} className="text-muted-foreground hover:text-foreground transition-colors"><ChevronDown className="w-4 h-4 rotate-90" /></button>
+                                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Register New Domain</p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <input
+                                        value={hostingDomainInput}
+                                        onChange={e => { setHostingDomainInput(e.target.value); if (hostingDomainQuery !== e.target.value.trim()) setHostingDomainQuery(""); }}
+                                        onKeyDown={e => {
+                                          if (e.key === "Enter") {
+                                            const d = hostingDomainInput.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
+                                            if (d && /^[a-z0-9][a-z0-9\-\.]{1,61}[a-z0-9]\.[a-z]{2,}$/.test(d)) setHostingDomainQuery(d);
+                                          }
+                                        }}
+                                        placeholder="e.g. mycompany.co.za"
+                                        className="flex-1 px-3 py-2 bg-background border border-border rounded-lg text-sm font-mono focus:ring-2 focus:ring-primary/50 outline-none"
+                                      />
+                                      <button
+                                        onClick={() => {
+                                          const d = hostingDomainInput.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
+                                          if (!d || !/^[a-z0-9][a-z0-9\-\.]{1,61}[a-z0-9]\.[a-z]{2,}$/.test(d)) {
+                                            toast({ title: "Enter a valid domain (e.g. mycompany.co.za)", variant: "destructive" });
+                                            return;
+                                          }
+                                          setHostingDomainQuery(d);
+                                        }}
+                                        className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+                                      >
+                                        Check
+                                      </button>
+                                    </div>
+
+                                    {hostingDomainCheck.isFetching && (
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+                                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                        Checking availability…
+                                      </div>
+                                    )}
+
+                                    {!hostingDomainCheck.isFetching && hostingDomainQuery && hostingDomainCheck.data && (() => {
+                                      const result = hostingDomainCheck.data as any;
+                                      const available = result?.available === true || result?.data?.available === true;
+                                      const tld = getTldPricing(hostingDomainQuery);
+                                      const regExcl = Number(tld?.resellerPriceExclVat ?? tld?.retailPriceExclVat ?? 0);
+                                      const regIncl = Number(tld?.resellerPriceInclVat ?? tld?.retailPriceInclVat ?? regExcl * 1.15);
+                                      if (!available) {
+                                        return (
+                                          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-xs text-destructive">
+                                            <X className="w-4 h-4 shrink-0" />
+                                            <span><span className="font-mono font-semibold">{hostingDomainQuery}</span> is not available. Try a different name or TLD.</span>
+                                          </div>
+                                        );
+                                      }
+                                      return (
+                                        <div className="space-y-2">
+                                          <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs">
+                                            <div className="flex items-center gap-2">
+                                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                              <span className="font-mono font-semibold text-foreground">{hostingDomainQuery}</span>
+                                              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Available!</span>
+                                            </div>
+                                            {tld && <span className="text-muted-foreground">{formatZar(regIncl)} <span className="text-muted-foreground/70">/yr incl VAT</span></span>}
+                                          </div>
+                                          <button
+                                            onClick={() => {
+                                              if (tld) {
+                                                addToCart({ referenceId: tld.id, itemType: "domain", name: `Domain: ${hostingDomainQuery}`, unitPriceExclVat: regExcl, unitPriceInclVat: regIncl, quantity: 1 });
+                                              }
+                                              resetHostingPanel();
+                                            }}
+                                            className="w-full flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-md shadow-primary/20 hover:bg-primary/90 transition-all"
+                                          >
+                                            <CheckCircle2 className="w-3.5 h-3.5" /> Add Domain to Order
+                                          </button>
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+
+                                ) : (
+                                  /* ── Transfer domain ── */
+                                  <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                      <button onClick={() => setHostingDomainMode(null)} className="text-muted-foreground hover:text-foreground transition-colors"><ChevronDown className="w-4 h-4 rotate-90" /></button>
+                                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Transfer Domain</p>
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Domain Name</label>
+                                      <input
+                                        value={hostingDomainInput}
+                                        onChange={e => setHostingDomainInput(e.target.value)}
+                                        placeholder="e.g. mycompany.co.za"
+                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm font-mono focus:ring-2 focus:ring-primary/50 outline-none"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">EPP / Auth Code <span className="text-muted-foreground/60 normal-case font-normal">(optional, you can provide later)</span></label>
+                                      <input
+                                        value={hostingEppCode}
+                                        onChange={e => setHostingEppCode(e.target.value)}
+                                        placeholder="EPP code from current registrar"
+                                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm font-mono focus:ring-2 focus:ring-primary/50 outline-none"
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] text-amber-700 dark:text-amber-400">
+                                      <ArrowRight className="w-3.5 h-3.5 shrink-0" />
+                                      Transfer pricing uses the domain TLD rate. Ensure the domain is unlocked at the current registrar before submitting.
+                                    </div>
+                                    <button
+                                      disabled={!hostingDomainInput.trim()}
+                                      onClick={() => {
+                                        const d = hostingDomainInput.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/$/, "");
+                                        if (!d) return;
+                                        const tld = getTldPricing(d);
+                                        const regExcl = Number(tld?.resellerPriceExclVat ?? tld?.retailPriceExclVat ?? 0);
+                                        const regIncl = Number(tld?.resellerPriceInclVat ?? tld?.retailPriceInclVat ?? regExcl * 1.15);
+                                        addToCart({ referenceId: tld?.id ?? 0, itemType: "domain", name: `Domain Transfer: ${d}${hostingEppCode ? ` (EPP: ${hostingEppCode})` : ""}`, unitPriceExclVat: regExcl, unitPriceInclVat: regIncl, quantity: 1 });
+                                        resetHostingPanel();
+                                      }}
+                                      className="w-full flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold shadow-md shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5" /> Add Transfer to Order
+                                    </button>
+                                  </div>
+                                )}
+
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     );
                   })}
