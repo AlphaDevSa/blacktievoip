@@ -173,6 +173,13 @@ export default function ResellerNewOrder() {
     return /(local|international|extension|minute[s]?|min)\s*(bundle|pack)|min\s*pack|talk\s*time|talktime|call\s*pack/.test(hay);
   }
 
+  // Helper: detect minute-bundle VoIP solution items (category = "Minute Bundles" or similar).
+  // These should NOT appear as standalone cards in the VoIP Solutions tab.
+  function isMinuteBundleVoipItem(item: any): boolean {
+    const cat = (item.categoryName ?? "").toLowerCase();
+    return /minute[s]?\s*bundle[s]?|minute[s]?\s*pack[s]?|min\s*bundle[s]?/.test(cat);
+  }
+
   const { data: clients = [] } = useQuery({
     queryKey: ["reseller-clients"],
     queryFn: async () => {
@@ -210,6 +217,9 @@ export default function ResellerNewOrder() {
   // Exclude minute bundles from the main services list — they only appear inside the DID picker panel
   const displayServices = (services as Service[]).filter(s => !isBundleService(s));
 
+  // Exclude minute bundle VoIP items from the VoIP Solutions tab — they don't belong as standalone cards
+  const displayVoipSolutions = (voipSolutions as any[]).filter(i => !isMinuteBundleVoipItem(i));
+
   // Derive the category list and filtered items for the current tab
   const currentTabItems: any[] = (() => {
     switch (tab) {
@@ -220,7 +230,7 @@ export default function ResellerNewOrder() {
       case "cybersecurity": return cybersecurity as any[];
       case "data-security": return dataSecurity as any[];
       case "web-development": return webDevelopment as any[];
-      case "voip-solutions": return voipSolutions as any[];
+      case "voip-solutions": return displayVoipSolutions;
       default: return [];
     }
   })();
@@ -263,7 +273,7 @@ export default function ResellerNewOrder() {
   const filteredCybersecurity = applyFilters(cybersecurity as any[]);
   const filteredDataSecurity = applyFilters(dataSecurity as any[]);
   const filteredWebDevelopment = applyFilters(webDevelopment as any[]);
-  const filteredVoipSolutions = applyFilters(voipSolutions as any[]);
+  const filteredVoipSolutions = applyFilters(displayVoipSolutions);
 
   // Inline DID + bundle picker for VoIP/PBX services
   const [didPanelKey, setDidPanelKey] = useState<string | null>(null);
@@ -598,7 +608,7 @@ export default function ResellerNewOrder() {
               { id: "cybersecurity", label: "Cybersecurity", icon: Shield, count: cybersecurity.length },
               { id: "data-security", label: "Data Security", icon: Lock, count: dataSecurity.length },
               { id: "web-development", label: "Web Dev", icon: Code, count: webDevelopment.length },
-              { id: "voip-solutions", label: "VoIP Solutions", icon: Wifi, count: voipSolutions.length },
+              { id: "voip-solutions", label: "VoIP Solutions", icon: Wifi, count: displayVoipSolutions.length },
             ];
             const active = tabOptions.find(t => t.id === tab)!;
             return (
@@ -1648,7 +1658,7 @@ export default function ResellerNewOrder() {
               ) : tab === "voip-solutions" ? (
                 /* ── VoIP Solutions ── */
                 <motion.div key="voip-solutions" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-2">
-                  {voipSolutions.length === 0 ? (
+                  {displayVoipSolutions.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                       <Wifi className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No VoIP solutions available</p>
