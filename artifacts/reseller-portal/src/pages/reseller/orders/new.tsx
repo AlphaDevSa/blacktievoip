@@ -184,6 +184,71 @@ export default function ResellerNewOrder() {
   const [submitted, setSubmitted] = useState(false);
   const [prefillApplied, setPrefillApplied] = useState(false);
 
+  // Search + filter
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+
+  // Reset search/filter when tab changes
+  useEffect(() => {
+    setSearchQuery("");
+    setCategoryFilter("");
+  }, [tab]);
+
+  // Derive the category list and filtered items for the current tab
+  const currentTabItems: any[] = (() => {
+    switch (tab) {
+      case "services": return services as any[];
+      case "connectivity": return connectivity as any[];
+      case "products": return products as any[];
+      case "hosting": return hostingPackages as any[];
+      case "cybersecurity": return cybersecurity as any[];
+      case "data-security": return dataSecurity as any[];
+      case "web-development": return webDevelopment as any[];
+      case "voip-solutions": return voipSolutions as any[];
+      default: return [];
+    }
+  })();
+
+  const tabCategories: string[] = Array.from(
+    new Set(currentTabItems.map((i: any) => i.categoryName).filter(Boolean))
+  ).sort() as string[];
+
+  function applyFilters<T extends { name: string; categoryName?: string | null; description?: string | null; sku?: string | null }>(items: T[]): T[] {
+    let out = items;
+    if (categoryFilter) out = out.filter(i => i.categoryName === categoryFilter);
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      out = out.filter(i =>
+        i.name.toLowerCase().includes(q) ||
+        (i.categoryName ?? "").toLowerCase().includes(q) ||
+        (i.description ?? "").toLowerCase().includes(q) ||
+        (i.sku ?? "").toLowerCase().includes(q)
+      );
+    }
+    return out;
+  }
+
+  const noMatchState = (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <Search className="w-10 h-10 text-muted-foreground/20 mb-3" />
+      <p className="text-muted-foreground text-sm">No results match your search</p>
+      <button onClick={() => { setSearchQuery(""); setCategoryFilter(""); }} className="mt-2 text-xs text-primary hover:underline">Clear filters</button>
+    </div>
+  );
+
+  const sortedServices = [...(services as Service[])].sort((a, b) => {
+    const rank = (s: Service) => { const n = s.name.toLowerCase(); if (/single\s*voip\s*line|voip\s*line/.test(n)) return 0; if (/hosted\s*pbx.*ext|pbx.*ext|pbx\s*extension/.test(n)) return 1; return 2; };
+    return rank(a) - rank(b);
+  });
+  const filteredServices = applyFilters(sortedServices);
+  const filteredConnectivity = applyFilters(connectivity as any[]);
+  const filteredProducts = applyFilters(products as any[]);
+  const filteredHosting = applyFilters(hostingPackages as any[]);
+  const filteredCybersecurity = applyFilters(cybersecurity as any[]);
+  const filteredDataSecurity = applyFilters(dataSecurity as any[]);
+  const filteredWebDevelopment = applyFilters(webDevelopment as any[]);
+  const filteredVoipSolutions = applyFilters(voipSolutions as any[]);
+
   // Inline DID + bundle picker for VoIP/PBX services
   const [voipDidPanelServiceId, setVoipDidPanelServiceId] = useState<number | null>(null);
   const [voipAreaCodeId, setVoipAreaCodeId] = useState<number | undefined>();
@@ -436,6 +501,55 @@ export default function ResellerNewOrder() {
             ))}
           </div>
 
+          {/* Search + filter toolbar — shown for all tabs except DIDs and Domains */}
+          {!["dids", "domains"].includes(tab) && (
+            <div className="px-3 py-2 border-b border-border/50 bg-background/60 flex flex-col sm:flex-row gap-2">
+              {/* Search */}
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search…"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-8 py-1.5 text-xs rounded-lg border border-border bg-background outline-none focus:ring-2 focus:ring-primary/40 transition"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Category dropdown — only when categories exist */}
+              {tabCategories.length > 0 && (
+                <div className="relative">
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+                  <select
+                    value={categoryFilter}
+                    onChange={e => setCategoryFilter(e.target.value)}
+                    className="appearance-none pl-3 pr-8 py-1.5 text-xs rounded-lg border border-border bg-background outline-none focus:ring-2 focus:ring-primary/40 transition min-w-[140px]"
+                  >
+                    <option value="">All categories</option>
+                    {tabCategories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Active filter chips */}
+              {(searchQuery || categoryFilter) && (
+                <button
+                  onClick={() => { setSearchQuery(""); setCategoryFilter(""); }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-destructive bg-destructive/10 hover:bg-destructive/20 transition whitespace-nowrap"
+                >
+                  <X className="w-3 h-3" /> Clear
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Items */}
           <div className="overflow-y-auto p-4" style={{ maxHeight: "calc(100vh - 220px)" }}>
             <AnimatePresence mode="wait">
@@ -447,15 +561,8 @@ export default function ResellerNewOrder() {
                       <Server className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No services available</p>
                     </div>
-                  ) : ([...(services as Service[])].sort((a, b) => {
-                      const rank = (s: Service) => {
-                        const n = s.name.toLowerCase();
-                        if (/single\s*voip\s*line|voip\s*line/.test(n)) return 0;
-                        if (/hosted\s*pbx.*ext|pbx.*ext|pbx\s*extension/.test(n)) return 1;
-                        return 2;
-                      };
-                      return rank(a) - rank(b);
-                    })).map((service: Service) => {
+                  ) : filteredServices.length === 0 ? noMatchState
+                  : filteredServices.map((service: Service) => {
                     const inCart = cartQtyOf(service.id, "service");
                     const { exclVat, inclVat } = vatPrices(service as any);
                     const needsDid = isVoipService(service);
@@ -708,7 +815,8 @@ export default function ResellerNewOrder() {
                       <Network className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No connectivity packages available</p>
                     </div>
-                  ) : (connectivity as ConnectivityItem[]).map((item: ConnectivityItem) => {
+                  ) : filteredConnectivity.length === 0 ? noMatchState
+                  : filteredConnectivity.map((item: ConnectivityItem) => {
                     const inCart = cartQtyOf(item.id, "connectivity");
                     const { exclVat, inclVat } = vatPrices(item as any);
                     return (
@@ -747,7 +855,8 @@ export default function ResellerNewOrder() {
                       <Package className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No products available</p>
                     </div>
-                  ) : (products as Product[]).map((product: Product) => {
+                  ) : filteredProducts.length === 0 ? noMatchState
+                  : filteredProducts.map((product: Product) => {
                     const inCart = cartQtyOf(product.id, "product");
                     const { exclVat, inclVat } = vatPrices(product as any);
                     return (
@@ -850,7 +959,8 @@ export default function ResellerNewOrder() {
                       <Globe className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No hosting packages available</p>
                     </div>
-                  ) : (hostingPackages as HostingPackage[]).map((pkg: HostingPackage) => {
+                  ) : filteredHosting.length === 0 ? noMatchState
+                  : filteredHosting.map((pkg: HostingPackage) => {
                     const inCart = cartQtyOf(pkg.id, "hosting");
                     const { exclVat, inclVat } = vatPrices(pkg as any);
                     return (
@@ -1034,7 +1144,8 @@ export default function ResellerNewOrder() {
                       <Shield className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No cybersecurity products available</p>
                     </div>
-                  ) : (cybersecurity as any[]).map((item: any) => {
+                  ) : filteredCybersecurity.length === 0 ? noMatchState
+                  : filteredCybersecurity.map((item: any) => {
                     const inCart = cartQtyOf(item.id, "cybersecurity");
                     const { exclVat, inclVat } = vatPrices(item);
                     return (
@@ -1073,7 +1184,8 @@ export default function ResellerNewOrder() {
                       <Lock className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No data security products available</p>
                     </div>
-                  ) : (dataSecurity as any[]).map((item: any) => {
+                  ) : filteredDataSecurity.length === 0 ? noMatchState
+                  : filteredDataSecurity.map((item: any) => {
                     const inCart = cartQtyOf(item.id, "data-security");
                     const { exclVat, inclVat } = vatPrices(item);
                     return (
@@ -1112,7 +1224,8 @@ export default function ResellerNewOrder() {
                       <Code className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No web development services available</p>
                     </div>
-                  ) : (webDevelopment as any[]).map((item: any) => {
+                  ) : filteredWebDevelopment.length === 0 ? noMatchState
+                  : filteredWebDevelopment.map((item: any) => {
                     const inCart = cartQtyOf(item.id, "web-development");
                     const { exclVat, inclVat } = vatPrices(item);
                     return (
@@ -1151,7 +1264,8 @@ export default function ResellerNewOrder() {
                       <Wifi className="w-10 h-10 text-muted-foreground/20 mb-3" />
                       <p className="text-muted-foreground text-sm">No VoIP solutions available</p>
                     </div>
-                  ) : (voipSolutions as any[]).map((item: any) => {
+                  ) : filteredVoipSolutions.length === 0 ? noMatchState
+                  : filteredVoipSolutions.map((item: any) => {
                     const inCart = cartQtyOf(item.id, "voip-solutions");
                     const { exclVat, inclVat } = vatPrices(item);
                     return (
