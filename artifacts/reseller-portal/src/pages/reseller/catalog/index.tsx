@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { 
   useGetCatalogServices, 
@@ -13,7 +13,7 @@ import {
   ConnectivityItem,
 } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Server, Package, Search, Globe, HardDrive, Mail, Database, Shield, Wifi, Tag, Calendar, CheckCircle2, XCircle, Loader2, AlertCircle, ShoppingCart, Network } from "lucide-react";
+import { Server, Package, Search, Globe, HardDrive, Mail, Database, Shield, Wifi, Tag, Calendar, CheckCircle2, XCircle, Loader2, AlertCircle, ShoppingCart, Network, ChevronDown } from "lucide-react";
 import { formatZar } from "@/lib/utils";
 import { useLocation } from "wouter";
 
@@ -44,6 +44,18 @@ export default function ResellerCatalog() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>("services");
   const [search, setSearch] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Domain availability check state
   const [domainQuery, setDomainQuery] = useState("");
@@ -128,18 +140,45 @@ export default function ResellerCatalog() {
     <AppLayout role="reseller" title="Product & Service Catalog">
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex flex-wrap gap-1 bg-card border border-border p-1 rounded-xl shadow-sm">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => { setActiveTab(tab.id); setSearch(""); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === tab.id ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-              <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${activeTab === tab.id ? "bg-white/20 text-white" : "bg-black/[0.07] text-muted-foreground"}`}>{tab.count}</span>
-            </button>
-          ))}
+        {/* Category dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          {(() => {
+            const active = tabs.find(t => t.id === activeTab)!;
+            return (
+              <button
+                onClick={() => setDropdownOpen(o => !o)}
+                className="flex items-center gap-3 px-4 py-2.5 bg-card border border-border rounded-xl shadow-sm text-sm font-medium text-foreground hover:border-primary/40 transition-all min-w-[220px]"
+              >
+                <active.icon className="w-4 h-4 text-primary flex-shrink-0" />
+                <span className="flex-1 text-left">{active.label}</span>
+                <span className="text-xs px-1.5 py-0.5 rounded-full font-bold bg-primary/10 text-primary">{active.count}</span>
+                <ChevronDown className={`w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+            );
+          })()}
+          <AnimatePresence>
+            {dropdownOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                transition={{ duration: 0.15 }}
+                className="absolute left-0 top-full mt-1.5 z-50 w-full min-w-[220px] bg-popover border border-border rounded-xl shadow-lg overflow-hidden"
+              >
+                {tabs.map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => { setActiveTab(tab.id); setSearch(""); setDropdownOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${activeTab === tab.id ? "bg-primary/10 text-primary font-semibold" : "text-foreground hover:bg-muted/60"}`}
+                  >
+                    <tab.icon className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left">{tab.label}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${activeTab === tab.id ? "bg-primary/15 text-primary" : "bg-black/[0.07] text-muted-foreground"}`}>{tab.count}</span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="relative w-full md:w-72">
