@@ -592,7 +592,12 @@ export default function AdminServicesCatalog() {
               <label className="block text-sm font-medium text-muted-foreground mb-1.5">Category</label>
               <select value={serviceForm.categoryId} onChange={e => setServiceForm({...serviceForm, categoryId: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-background border border-border text-foreground focus:ring-2 focus:ring-primary/50 outline-none appearance-none">
                 <option value="">None</option>
-                {categories.map((c: Category) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {parentCategories.flatMap(parent => [
+                  <option key={parent.id} value={String(parent.id)}>{parent.name}</option>,
+                  ...subCatsOf(parent.id).map(sub =>
+                    <option key={sub.id} value={String(sub.id)}>  ↳ {sub.name}</option>
+                  ),
+                ])}
               </select>
             </div>
 
