@@ -25,7 +25,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Minus, Trash2, ShoppingCart, Server, Package, Phone, CheckCircle2,
   MapPin, Globe, HardDrive, Mail, Database, Shield, Wifi, Search, X, Loader2, Tag, Calendar, User,
-  ChevronDown, Network, Lock, Code, ArrowRight,
+  ChevronDown, Network, Lock, Code, ArrowRight, Clock,
 } from "lucide-react";
 import { formatZar } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -397,6 +397,15 @@ export default function ResellerNewOrder() {
     { areaCodeId: voipAreaCodeId! },
     { query: { enabled: !!voipAreaCodeId } }
   );
+
+  // Pending DID/bundle selection (selected in panel but not yet confirmed with "Add to Order")
+  const pendingDid = voipSelectedDidId
+    ? (voipAvailableDids as Did[]).find((d: Did) => d.id === voipSelectedDidId) ?? null
+    : null;
+  const pendingBundle = voipBundleServiceId && !servicesLoading
+    ? (services as Service[]).find(s => s.id === voipBundleServiceId) ?? null
+    : null;
+  const pendingBundleInclVat = pendingBundle ? vatPrices(pendingBundle as any).inclVat : 0;
 
   // Domain availability check scoped to the hosting panel
   const hostingDomainCheck = useResellerCheckDomain(
@@ -1910,14 +1919,55 @@ export default function ResellerNewOrder() {
             </span>
           </div>
 
-          <div className="p-4">
-            {cart.length === 0 ? (
+          <div className="p-4 space-y-3">
+            {/* Pending DID / bundle preview — shown while panel is open */}
+            <AnimatePresence>
+              {(pendingDid || pendingBundle) && (
+                <motion.div key="pending-selection" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 rounded-full border border-dashed border-amber-400/50">
+                      <Clock className="w-3 h-3 text-amber-500" />
+                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">Pending</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    {pendingDid && (
+                      <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-dashed border-primary/40 bg-primary/5">
+                        <div className="flex items-center gap-2.5">
+                          <Phone className="w-3.5 h-3.5 text-primary shrink-0" />
+                          <div>
+                            <p className="font-mono font-semibold text-sm text-primary tracking-wider">{(pendingDid as any).number}</p>
+                            <p className="text-[10px] text-muted-foreground">{(pendingDid as any).areaCode} — {(pendingDid as any).region}</p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 shrink-0">Free</span>
+                      </div>
+                    )}
+                    {pendingBundle && (
+                      <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-dashed border-primary/40 bg-primary/5">
+                        <div className="flex items-center gap-2.5">
+                          <Phone className="w-3.5 h-3.5 text-primary shrink-0" />
+                          <div>
+                            <p className="font-semibold text-sm text-primary">{pendingBundle.name}</p>
+                            <p className="text-[10px] text-muted-foreground">Minute bundle</p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-bold text-primary shrink-0">{formatZar(pendingBundleInclVat)}/mo</span>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Confirmed cart items */}
+            {cart.length === 0 && !pendingDid && !pendingBundle ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <ShoppingCart className="w-10 h-10 text-muted-foreground/20 mb-3" />
                 <p className="text-muted-foreground text-sm">Your order is empty</p>
                 <p className="text-muted-foreground/60 text-xs mt-1">Browse the catalog to add items</p>
               </div>
-            ) : (
+            ) : cart.length > 0 ? (
               <div className="space-y-4">
                 {/* Monthly Recurring group */}
                 {cart.filter(i => MONTHLY_TYPES.has(i.itemType)).length > 0 && (
@@ -1965,7 +2015,7 @@ export default function ResellerNewOrder() {
                   </div>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Totals + Notes + Submit */}
