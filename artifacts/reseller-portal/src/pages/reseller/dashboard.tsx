@@ -93,6 +93,7 @@ export default function ResellerDashboard() {
     { label: "Cybersecurity",  count: (catalogItems as any)?.totalCybersecurity ?? 0, icon: Shield,  cls: "bg-red-500/10 text-red-500" },
     { label: "Data Security",  count: (catalogItems as any)?.totalDataSecurity  ?? 0, icon: Lock,    cls: "bg-violet-500/10 text-violet-500" },
     { label: "Web Dev",        count: (catalogItems as any)?.totalWebDevelopment?? 0, icon: Globe,   cls: "bg-cyan-500/10 text-cyan-500" },
+    { label: "VoIP Solutions", count: (catalogItems as any)?.totalVoipSolutions ?? 0, icon: Phone,   cls: "bg-indigo-500/10 text-indigo-500" },
   ];
 
   if (isLoading) {

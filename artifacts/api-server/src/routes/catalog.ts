@@ -15,6 +15,8 @@ import {
   dataSecurityItemsTable,
   webDevCategoriesTable,
   webDevItemsTable,
+  voipCategoriesTable,
+  voipItemsTable,
 } from "@workspace/db";
 import { eq, sql, isNull, gte } from "drizzle-orm";
 
@@ -897,10 +899,16 @@ router.get("/catalog/new-items", async (_req, res) => {
       .where(eq(webDevItemsTable.status, "active"))
       .orderBy(webDevItemsTable.createdAt);
 
+    const newVoipSolutions = await db
+      .select({ id: voipItemsTable.id, name: voipItemsTable.name, type: sql<string>`'voip-solutions'`, createdAt: voipItemsTable.createdAt })
+      .from(voipItemsTable)
+      .where(eq(voipItemsTable.status, "active"))
+      .orderBy(voipItemsTable.createdAt);
+
     const allItems = [
       ...newServices, ...newProducts, ...newHosting, ...newTlds,
       ...newConnectivity, ...newCybersecurity, ...newDataSecurity,
-      ...newWebDev,
+      ...newWebDev, ...newVoipSolutions,
     ]
       .map(i => ({ ...i, createdAt: i.createdAt instanceof Date ? i.createdAt.toISOString() : i.createdAt }))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -918,6 +926,7 @@ router.get("/catalog/new-items", async (_req, res) => {
       totalCybersecurity: newCybersecurity.length,
       totalDataSecurity: newDataSecurity.length,
       totalWebDevelopment: newWebDev.length,
+      totalVoipSolutions: newVoipSolutions.length,
     });
   } catch (err) {
     console.error(err);
@@ -1226,13 +1235,100 @@ router.get("/catalog/web-development", async (_req, res) => {
   } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
-// ── VoIP Solutions (reads from services table) ────────────────────────────────
+// ── VoIP Solutions ────────────────────────────────────────────────────────────
 
-router.get("/catalog/voip-solutions", async (_req, res) => {
+router.get("/admin/voip-categories", requireAdmin, async (_req, res) => {
   try {
-    const items = await db.select({ id: servicesTable.id, categoryId: servicesTable.categoryId, categoryName: serviceCategoriesTable.name, name: servicesTable.name, description: servicesTable.description, price: servicesTable.price, retailPriceExclVat: servicesTable.retailPriceExclVat, resellerPriceExclVat: servicesTable.resellerPriceExclVat, resellerPriceInclVat: servicesTable.resellerPriceInclVat, priceInclVat: servicesTable.priceInclVat, unit: servicesTable.unit, status: servicesTable.status, sortOrder: servicesTable.sortOrder, createdAt: servicesTable.createdAt })
-      .from(servicesTable).leftJoin(serviceCategoriesTable, eq(servicesTable.categoryId, serviceCategoriesTable.id)).where(eq(servicesTable.status, "active")).orderBy(servicesTable.sortOrder, servicesTable.name);
+    const cats = await db.select().from(voipCategoriesTable).orderBy(voipCategoriesTable.sortOrder, voipCategoriesTable.name);
+    return res.json(cats);
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.post("/admin/voip-categories", requireAdmin, async (req, res) => {
+  try {
+    const { name, description, parentId, sortOrder } = req.body;
+    if (!name) return res.status(400).json({ error: "Name is required" });
+    const [cat] = await db.insert(voipCategoriesTable).values({ name, description, parentId: parentId || null, sortOrder: sortOrder ?? 0 }).returning();
+    return res.status(201).json(cat);
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.put("/admin/voip-categories/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { name, description, parentId, sortOrder } = req.body;
+    const upd: any = {};
+    if (name !== undefined) upd.name = name;
+    if (description !== undefined) upd.description = description;
+    if (parentId !== undefined) upd.parentId = parentId || null;
+    if (sortOrder !== undefined) upd.sortOrder = sortOrder;
+    const [cat] = await db.update(voipCategoriesTable).set(upd).where(eq(voipCategoriesTable.id, id)).returning();
+    if (!cat) return res.status(404).json({ error: "Not found" });
+    return res.json(cat);
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.delete("/admin/voip-categories/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await db.delete(voipCategoriesTable).where(eq(voipCategoriesTable.id, id));
+    return res.json({ success: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.get("/admin/voip-items", requireAdmin, async (_req, res) => {
+  try {
+    const items = await db.select({ id: voipItemsTable.id, categoryId: voipItemsTable.categoryId, categoryName: voipCategoriesTable.name, name: voipItemsTable.name, description: voipItemsTable.description, price: voipItemsTable.price, retailPriceExclVat: voipItemsTable.retailPriceExclVat, resellerPriceExclVat: voipItemsTable.resellerPriceExclVat, resellerPriceInclVat: voipItemsTable.resellerPriceInclVat, priceInclVat: voipItemsTable.priceInclVat, unit: voipItemsTable.unit, status: voipItemsTable.status, sortOrder: voipItemsTable.sortOrder, createdAt: voipItemsTable.createdAt })
+      .from(voipItemsTable).leftJoin(voipCategoriesTable, eq(voipItemsTable.categoryId, voipCategoriesTable.id)).orderBy(voipItemsTable.sortOrder, voipItemsTable.name);
     return res.json(items.map(serializeServiceLikeItem));
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.post("/admin/voip-items", requireAdmin, async (req, res) => {
+  try {
+    const { categoryId, name, description, retailPriceExclVat, resellerPriceExclVat, resellerPriceInclVat, priceInclVat, unit, status, sortOrder } = req.body;
+    if (!name) return res.status(400).json({ error: "Name is required" });
+    const [item] = await db.insert(voipItemsTable).values({ categoryId: categoryId || null, name, description, price: String(retailPriceExclVat ?? 0), retailPriceExclVat: retailPriceExclVat != null ? String(retailPriceExclVat) : null, resellerPriceExclVat: resellerPriceExclVat != null ? String(resellerPriceExclVat) : null, resellerPriceInclVat: resellerPriceInclVat != null ? String(resellerPriceInclVat) : null, priceInclVat: priceInclVat != null ? String(priceInclVat) : null, unit: unit || "month", status: status || "active", sortOrder: sortOrder ?? 0 }).returning();
+    return res.status(201).json(serializeServiceLikeItem(item));
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.put("/admin/voip-items/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { categoryId, name, description, retailPriceExclVat, resellerPriceExclVat, resellerPriceInclVat, priceInclVat, unit, status, sortOrder } = req.body;
+    const upd: any = {};
+    if (categoryId !== undefined) upd.categoryId = categoryId || null;
+    if (name !== undefined) upd.name = name;
+    if (description !== undefined) upd.description = description;
+    if (retailPriceExclVat !== undefined) upd.retailPriceExclVat = retailPriceExclVat != null ? String(retailPriceExclVat) : null;
+    if (resellerPriceExclVat !== undefined) upd.resellerPriceExclVat = resellerPriceExclVat != null ? String(resellerPriceExclVat) : null;
+    if (resellerPriceInclVat !== undefined) upd.resellerPriceInclVat = resellerPriceInclVat != null ? String(resellerPriceInclVat) : null;
+    if (priceInclVat !== undefined) upd.priceInclVat = priceInclVat != null ? String(priceInclVat) : null;
+    if (retailPriceExclVat !== undefined) upd.price = retailPriceExclVat != null ? String(retailPriceExclVat) : "0";
+    if (unit !== undefined) upd.unit = unit;
+    if (status !== undefined) upd.status = status;
+    if (sortOrder !== undefined) upd.sortOrder = sortOrder;
+    const [item] = await db.update(voipItemsTable).set(upd).where(eq(voipItemsTable.id, id)).returning();
+    if (!item) return res.status(404).json({ error: "Not found" });
+    return res.json(serializeServiceLikeItem(item));
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.delete("/admin/voip-items/:id", requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await db.delete(voipItemsTable).where(eq(voipItemsTable.id, id));
+    return res.json({ success: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.patch("/admin/voip-items/reorder", requireAdmin, async (req, res) => {
+  try {
+    const items: { id: number; sortOrder: number }[] = req.body;
+    if (!Array.isArray(items)) return res.status(400).json({ error: "Expected array" });
+    await Promise.all(items.map(({ id, sortOrder }) => db.update(voipItemsTable).set({ sortOrder }).where(eq(voipItemsTable.id, id))));
+    return res.json({ success: true });
   } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
@@ -1287,6 +1383,14 @@ router.patch("/admin/web-dev-items/reorder", requireAdmin, async (req, res) => {
     if (!Array.isArray(items)) return res.status(400).json({ error: "Expected array" });
     await Promise.all(items.map(({ id, sortOrder }) => db.update(webDevItemsTable).set({ sortOrder }).where(eq(webDevItemsTable.id, id))));
     return res.json({ success: true });
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+});
+
+router.get("/catalog/voip-solutions", async (_req, res) => {
+  try {
+    const items = await db.select({ id: voipItemsTable.id, categoryId: voipItemsTable.categoryId, categoryName: voipCategoriesTable.name, name: voipItemsTable.name, description: voipItemsTable.description, price: voipItemsTable.price, retailPriceExclVat: voipItemsTable.retailPriceExclVat, resellerPriceExclVat: voipItemsTable.resellerPriceExclVat, resellerPriceInclVat: voipItemsTable.resellerPriceInclVat, priceInclVat: voipItemsTable.priceInclVat, unit: voipItemsTable.unit, status: voipItemsTable.status, sortOrder: voipItemsTable.sortOrder, createdAt: voipItemsTable.createdAt })
+      .from(voipItemsTable).leftJoin(voipCategoriesTable, eq(voipItemsTable.categoryId, voipCategoriesTable.id)).where(eq(voipItemsTable.status, "active")).orderBy(voipItemsTable.sortOrder, voipItemsTable.name);
+    return res.json(items.map(serializeServiceLikeItem));
   } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
