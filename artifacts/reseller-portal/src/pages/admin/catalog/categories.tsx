@@ -25,22 +25,18 @@ import {
   useAdminCreateWebDevCategory,
   useAdminUpdateWebDevCategory,
   useAdminDeleteWebDevCategory,
-  useAdminGetVoipCategories,
-  useAdminCreateVoipCategory,
-  useAdminUpdateVoipCategory,
-  useAdminDeleteVoipCategory,
   Category,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   FolderTree, Plus, Trash2, Edit2, Server, Package, Wifi,
-  ChevronRight, Tag, Hash, FolderOpen, Folder, Shield, Lock, Globe, Phone, Network,
+  ChevronRight, Tag, Hash, FolderOpen, Folder, Shield, Lock, Globe, Network,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/hooks/use-toast";
 
-type CatalogType = "service" | "product" | "connectivity" | "cybersecurity" | "data-security" | "web-development" | "voip-solutions";
+type CatalogType = "service" | "product" | "connectivity" | "cybersecurity" | "data-security" | "web-development";
 
 interface TabConfig {
   id: CatalogType;
@@ -58,7 +54,6 @@ const TABS: TabConfig[] = [
   { id: "cybersecurity",   label: "Cybersecurity",   icon: Shield,  color: "text-blue-400",   bgColor: "bg-blue-400/10",   queryKey: "/api/admin/cybersecurity-categories" },
   { id: "data-security",   label: "Data Security",   icon: Lock,    color: "text-violet-500", bgColor: "bg-violet-500/10", queryKey: "/api/admin/data-security-categories" },
   { id: "web-development", label: "Web Development", icon: Globe,   color: "text-emerald-400", bgColor: "bg-emerald-400/10", queryKey: "/api/admin/web-dev-categories" },
-  { id: "voip-solutions",  label: "VoIP Solutions",  icon: Phone,   color: "text-orange-500", bgColor: "bg-orange-500/10", queryKey: "/api/admin/voip-categories" },
 ];
 
 interface CatFormState {
@@ -100,7 +95,6 @@ export default function AdminCategories() {
   const { data: cybersecurityCategories = [] }  = useAdminGetCybersecurityCategories();
   const { data: dataSecurityCategories = [] }   = useAdminGetDataSecurityCategories();
   const { data: webDevCategories = [] }         = useAdminGetWebDevCategories();
-  const { data: voipCategories = [] }           = useAdminGetVoipCategories();
 
   const createService      = useAdminCreateServiceCategory();
   const updateService      = useAdminUpdateServiceCategory();
@@ -120,9 +114,6 @@ export default function AdminCategories() {
   const createWebDev       = useAdminCreateWebDevCategory();
   const updateWebDev       = useAdminUpdateWebDevCategory();
   const deleteWebDev       = useAdminDeleteWebDevCategory();
-  const createVoip         = useAdminCreateVoipCategory();
-  const updateVoip         = useAdminUpdateVoipCategory();
-  const deleteVoip         = useAdminDeleteVoipCategory();
 
   function getCurrent(): Category[] {
     switch (activeTab) {
@@ -132,7 +123,6 @@ export default function AdminCategories() {
       case "cybersecurity":   return cybersecurityCategories;
       case "data-security":   return dataSecurityCategories;
       case "web-development": return webDevCategories;
-      case "voip-solutions":  return voipCategories;
     }
   }
 
@@ -144,7 +134,6 @@ export default function AdminCategories() {
       case "cybersecurity":   return cybersecurityCategories.length;
       case "data-security":   return dataSecurityCategories.length;
       case "web-development": return webDevCategories.length;
-      case "voip-solutions":  return voipCategories.length;
     }
   }
 
@@ -159,7 +148,6 @@ export default function AdminCategories() {
     "cybersecurity":   { adminItems: "/api/admin/cybersecurity-items",publicCatalog: "/api/catalog/cybersecurity" },
     "data-security":   { adminItems: "/api/admin/data-security-items",publicCatalog: "/api/catalog/data-security" },
     "web-development": { adminItems: "/api/admin/web-dev-items",      publicCatalog: "/api/catalog/web-development" },
-    "voip-solutions":  { adminItems: "/api/admin/voip-items",         publicCatalog: "/api/catalog/voip-solutions" },
   };
 
   function invalidate() {
@@ -202,7 +190,6 @@ export default function AdminCategories() {
         case "cybersecurity":   await deleteCyber.mutateAsync({ id: cat.id }); break;
         case "data-security":   await deleteDataSec.mutateAsync({ id: cat.id }); break;
         case "web-development": await deleteWebDev.mutateAsync({ id: cat.id }); break;
-        case "voip-solutions":  await deleteVoip.mutateAsync({ id: cat.id }); break;
       }
       toast({ title: `"${cat.name}" deleted` });
       invalidate();
@@ -231,7 +218,6 @@ export default function AdminCategories() {
           case "cybersecurity":   await updateCyber.mutateAsync({ id: editing.id, data: payload }); break;
           case "data-security":   await updateDataSec.mutateAsync({ id: editing.id, data: payload }); break;
           case "web-development": await updateWebDev.mutateAsync({ id: editing.id, data: payload }); break;
-          case "voip-solutions":  await updateVoip.mutateAsync({ id: editing.id, data: payload }); break;
         }
         toast({ title: `"${payload.name}" updated` });
       } else {
@@ -242,7 +228,6 @@ export default function AdminCategories() {
           case "cybersecurity":   await createCyber.mutateAsync({ data: payload }); break;
           case "data-security":   await createDataSec.mutateAsync({ data: payload }); break;
           case "web-development": await createWebDev.mutateAsync({ data: payload }); break;
-          case "voip-solutions":  await createVoip.mutateAsync({ data: payload }); break;
         }
         toast({ title: `"${payload.name}" created` });
       }

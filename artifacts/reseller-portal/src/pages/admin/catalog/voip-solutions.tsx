@@ -1,14 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import {
-  useAdminGetVoipCategories,
-  useAdminGetVoipItems,
-  useAdminCreateVoipCategory,
-  useAdminUpdateVoipCategory,
-  useAdminCreateVoipItem,
-  useAdminUpdateVoipItem,
-  useAdminDeleteVoipItem,
-  useAdminDeleteVoipCategory,
+  useAdminGetServiceCategories,
+  useAdminGetServices,
+  useAdminCreateServiceCategory,
+  useAdminUpdateServiceCategory,
+  useAdminCreateService,
+  useAdminUpdateService,
+  useAdminDeleteService,
+  useAdminDeleteServiceCategory,
   Category,
   Service
 } from "@workspace/api-client-react";
@@ -100,8 +100,8 @@ function SortableRow({
 export default function AdminVoipSolutionsCatalog() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { data: categories = [] } = useAdminGetVoipCategories();
-  const { data: items = [] } = useAdminGetVoipItems();
+  const { data: categories = [] } = useAdminGetServiceCategories();
+  const { data: items = [] } = useAdminGetServices();
   const [selectedCatId, setSelectedCatId] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [sidebarMode, setSidebarMode] = useState<"browse" | "manage">("browse");
@@ -112,12 +112,12 @@ export default function AdminVoipSolutionsCatalog() {
   const [editingCat, setEditingCat] = useState<Category | null>(null);
   const [orderedItems, setOrderedItems] = useState<Service[]>([]);
 
-  const createCat = useAdminCreateVoipCategory();
-  const updateCat = useAdminUpdateVoipCategory();
-  const createItem = useAdminCreateVoipItem();
-  const updateItem = useAdminUpdateVoipItem();
-  const deleteItem = useAdminDeleteVoipItem();
-  const deleteCat = useAdminDeleteVoipCategory();
+  const createCat = useAdminCreateServiceCategory();
+  const updateCat = useAdminUpdateServiceCategory();
+  const createItem = useAdminCreateService();
+  const updateItem = useAdminUpdateService();
+  const deleteItem = useAdminDeleteService();
+  const deleteCat = useAdminDeleteServiceCategory();
 
   const filteredItems = useMemo(
     () => selectedCatId ? (items as Service[]).filter(s => s.categoryId === selectedCatId) : (items as Service[]),
@@ -142,13 +142,13 @@ export default function AdminVoipSolutionsCatalog() {
     setOrderedItems(reordered);
     const payload = reordered.map((item, idx) => ({ id: item.id, sortOrder: idx + 1 }));
     try {
-      await fetch("/api/admin/voip-items/reorder", {
+      await fetch("/api/admin/services/reorder", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(payload),
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/voip-items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/services"] });
       queryClient.invalidateQueries({ queryKey: ["/api/catalog/voip-solutions"] });
     } catch {
       toast({ title: "Failed to save order", variant: "destructive" });
@@ -176,7 +176,7 @@ export default function AdminVoipSolutionsCatalog() {
     try {
       if (editingCat) { await updateCat.mutateAsync({ id: editingCat.id, data: payload }); toast({ title: `"${payload.name}" updated` }); }
       else { await createCat.mutateAsync({ data: payload }); toast({ title: `"${payload.name}" created` }); }
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/voip-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/service-categories"] });
       queryClient.invalidateQueries({ queryKey: ["/api/catalog/voip-solutions"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] });
       setIsCatModalOpen(false);
     } catch { toast({ title: "Failed to save category", variant: "destructive" }); }
@@ -186,7 +186,7 @@ export default function AdminVoipSolutionsCatalog() {
     if ((categories as Category[]).some(c => c.parentId === cat.id)) { toast({ title: "Remove sub-categories first", variant: "destructive" }); return; }
     if ((items as Service[]).some(s => s.categoryId === cat.id)) { toast({ title: "Reassign items before deleting", variant: "destructive" }); return; }
     if (!confirm(`Delete "${cat.name}"?`)) return;
-    try { await deleteCat.mutateAsync({ id: cat.id }); toast({ title: `"${cat.name}" deleted` }); queryClient.invalidateQueries({ queryKey: ["/api/admin/voip-categories"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/voip-solutions"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] }); if (selectedCatId === cat.id) setSelectedCatId(null); }
+    try { await deleteCat.mutateAsync({ id: cat.id }); toast({ title: `"${cat.name}" deleted` }); queryClient.invalidateQueries({ queryKey: ["/api/admin/service-categories"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/voip-solutions"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] }); if (selectedCatId === cat.id) setSelectedCatId(null); }
     catch { toast({ title: "Failed to delete", variant: "destructive" }); }
   }
 
@@ -205,13 +205,13 @@ export default function AdminVoipSolutionsCatalog() {
       else { await createItem.mutateAsync({ data: payload }); toast({ title: "Item created" }); }
       setIsItemModalOpen(false); setEditingItem(null);
       setItemForm({ name: "", description: "", categoryId: "", retailPriceExclVat: "", resellerPriceExclVat: "", resellerPriceInclVat: "", priceInclVat: "", unit: "month", status: "active" });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/voip-items"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/voip-solutions"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/services"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/voip-solutions"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] });
     } catch (err: unknown) { const msg = err instanceof Error ? err.message.replace(/^HTTP \d+[^:]*:\s*/, "") : "Unknown error"; toast({ title: editingItem ? "Error updating" : "Error creating", description: msg, variant: "destructive" }); }
   };
 
   const handleDeleteItem = async (id: number) => {
     if (confirm("Delete this item?")) {
-      try { await deleteItem.mutateAsync({ id }); toast({ title: "Item deleted" }); queryClient.invalidateQueries({ queryKey: ["/api/admin/voip-items"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/voip-solutions"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] }); }
+      try { await deleteItem.mutateAsync({ id }); toast({ title: "Item deleted" }); queryClient.invalidateQueries({ queryKey: ["/api/admin/services"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/voip-solutions"] }); queryClient.invalidateQueries({ queryKey: ["/api/catalog/new-items"] }); }
       catch (err: unknown) { const msg = err instanceof Error ? err.message.replace(/^HTTP \d+[^:]*:\s*/, "") : "Unknown error"; toast({ title: "Error deleting", description: msg, variant: "destructive" }); }
     }
   };

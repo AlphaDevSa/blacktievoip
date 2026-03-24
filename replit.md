@@ -51,7 +51,9 @@ Resellers can self-register and require admin approval before login.
 
 ## Database Schema
 
-Tables: `admins`, `resellers`, `clients`, `services`, `service_categories`, `products`, `product_categories`, `area_codes`, `dids`, `orders`, `order_items`, `web_hosting_packages`, `domain_tlds`, `notices`, `connectivity_categories`, `connectivity_items`, `company_settings`
+Tables: `admins`, `resellers`, `clients`, `services`, `service_categories`, `products`, `product_categories`, `area_codes`, `dids`, `orders`, `order_items`, `web_hosting_packages`, `domain_tlds`, `notices`, `connectivity_categories`, `connectivity_items`, `cybersecurity_categories`, `cybersecurity_items`, `data_security_categories`, `data_security_items`, `web_dev_categories`, `web_dev_items`, `company_settings`
+
+Note: The `voip_items` and `voip_categories` tables have been removed. All VoIP-related services are managed through `services` + `service_categories`. The public `/api/catalog/voip-solutions` endpoint now reads from the `services` table. The admin "VoIP Solutions Catalog" page uses the same service endpoints as "Services Catalog".
 
 ## API Routing
 

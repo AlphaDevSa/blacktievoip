@@ -20,5 +20,4 @@ export * from "./data_security_categories";
 export * from "./data_security_items";
 export * from "./web_dev_categories";
 export * from "./web_dev_items";
-export * from "./voip_categories";
-export * from "./voip_items";
+
