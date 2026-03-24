@@ -60,25 +60,8 @@ export default function ResellerCreateClient() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
-            {/* Service Details */}
-            <div className="space-y-4 md:col-span-2">
-              <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Service Requirements</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">SIP Extensions Required *</label>
-                  <input {...form.register("sipExtensions")} type="number" className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/50 outline-none transition-all" />
-                  {form.formState.errors.sipExtensions && <p className="text-xs text-destructive">{form.formState.errors.sipExtensions.message}</p>}
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Agreed Monthly Fee (ZAR) *</label>
-                  <input {...form.register("monthlyFee")} type="number" step="0.01" className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/50 outline-none transition-all" />
-                  {form.formState.errors.monthlyFee && <p className="text-xs text-destructive">{form.formState.errors.monthlyFee.message}</p>}
-                </div>
-              </div>
-            </div>
-
             {/* Company Info */}
-            <div className="space-y-4 md:col-span-2 pt-4 border-t border-border/50">
+            <div className="space-y-4 md:col-span-2">
               <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Client Contact</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1.5">

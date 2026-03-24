@@ -60,8 +60,8 @@ export const createClientSchema = z.object({
   address2: z.string().optional(),
   city: z.string().optional(),
   province: z.string().optional(),
-  sipExtensions: z.coerce.number().min(1, "At least 1 extension required"),
-  monthlyFee: z.coerce.number().min(0, "Fee cannot be negative"),
+  sipExtensions: z.coerce.number().min(1).optional().default(1),
+  monthlyFee: z.coerce.number().min(0).optional().default(0),
   notes: z.string().optional(),
 });
 
