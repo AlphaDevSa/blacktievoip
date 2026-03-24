@@ -508,9 +508,9 @@ export default function ResellerNewOrder() {
 
         {/* Left: Catalog browser */}
         <div className="flex-1 flex flex-col bg-card border border-border rounded-2xl shadow-lg overflow-hidden">
-          {/* Tabs */}
-          <div className="p-3 border-b border-border/50 flex items-center gap-2 bg-muted/20 flex-wrap">
-            {([
+          {/* Tab dropdown */}
+          {(() => {
+            const tabOptions: { id: OrderTab; label: string; icon: React.ElementType; count: number }[] = [
               { id: "services", label: "Services", icon: Server, count: services.length },
               { id: "connectivity", label: "Connectivity", icon: Network, count: connectivity.length },
               { id: "products", label: "Products", icon: Package, count: products.length },
@@ -521,18 +521,30 @@ export default function ResellerNewOrder() {
               { id: "data-security", label: "Data Security", icon: Lock, count: dataSecurity.length },
               { id: "web-development", label: "Web Dev", icon: Code, count: webDevelopment.length },
               { id: "voip-solutions", label: "VoIP Solutions", icon: Wifi, count: voipSolutions.length },
-            ] as { id: OrderTab; label: string; icon: React.ElementType; count: number }[]).map(t => (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${tab === t.id ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "text-muted-foreground hover:text-foreground hover:bg-black/5"}`}
-              >
-                <t.icon className="w-3.5 h-3.5" />
-                {t.label}
-                <span className="opacity-70">({t.count})</span>
-              </button>
-            ))}
-          </div>
+            ];
+            const active = tabOptions.find(t => t.id === tab)!;
+            return (
+              <div className="p-3 border-b border-border/50 bg-muted/20">
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-primary">
+                    <active.icon className="w-4 h-4" />
+                  </div>
+                  <select
+                    value={tab}
+                    onChange={e => setTab(e.target.value as OrderTab)}
+                    className="w-full appearance-none pl-9 pr-9 py-2.5 rounded-xl border border-border bg-background text-sm font-semibold text-foreground focus:ring-2 focus:ring-primary/50 outline-none cursor-pointer"
+                  >
+                    {tabOptions.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.label} ({t.count})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Search + filter toolbar — shown for all tabs except DIDs and Domains */}
           {!["dids", "domains"].includes(tab) && (
