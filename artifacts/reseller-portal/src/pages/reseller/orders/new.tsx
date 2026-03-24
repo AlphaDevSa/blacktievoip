@@ -321,8 +321,53 @@ export default function ResellerNewOrder() {
       // Domain TLD — just switch to the domains tab; user fills in the actual domain name
       setTab("domains");
       setPrefillApplied(true);
+    } else if (type === "connectivity" && (connectivity as any[]).length > 0) {
+      const item = (connectivity as any[]).find(c => c.id === id);
+      if (item) {
+        const exclVat = Number(item.resellerPriceExclVat ?? item.retailPriceExclVat ?? 0);
+        const inclVat = Number(item.resellerPriceInclVat ?? item.retailPriceInclVat ?? exclVat * 1.15);
+        setCart([{ referenceId: id, itemType: "connectivity", name: item.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 }]);
+        setTab("connectivity");
+      }
+      setPrefillApplied(true);
+    } else if (type === "cybersecurity" && (cybersecurity as any[]).length > 0) {
+      const item = (cybersecurity as any[]).find(c => c.id === id);
+      if (item) {
+        const exclVat = Number(item.resellerPriceExclVat ?? item.retailPriceExclVat ?? 0);
+        const inclVat = Number(item.resellerPriceInclVat ?? item.priceInclVat ?? exclVat * 1.15);
+        setCart([{ referenceId: id, itemType: "cybersecurity", name: item.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 }]);
+        setTab("cybersecurity");
+      }
+      setPrefillApplied(true);
+    } else if (type === "data-security" && (dataSecurity as any[]).length > 0) {
+      const item = (dataSecurity as any[]).find(c => c.id === id);
+      if (item) {
+        const exclVat = Number(item.resellerPriceExclVat ?? item.retailPriceExclVat ?? 0);
+        const inclVat = Number(item.resellerPriceInclVat ?? item.priceInclVat ?? exclVat * 1.15);
+        setCart([{ referenceId: id, itemType: "data-security", name: item.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 }]);
+        setTab("data-security");
+      }
+      setPrefillApplied(true);
+    } else if (type === "web-development" && (webDevelopment as any[]).length > 0) {
+      const item = (webDevelopment as any[]).find(c => c.id === id);
+      if (item) {
+        const exclVat = Number(item.resellerPriceExclVat ?? item.retailPriceExclVat ?? 0);
+        const inclVat = Number(item.resellerPriceInclVat ?? item.priceInclVat ?? exclVat * 1.15);
+        setCart([{ referenceId: id, itemType: "web-development", name: item.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 }]);
+        setTab("web-development");
+      }
+      setPrefillApplied(true);
+    } else if (type === "voip-solutions" && (voipSolutions as any[]).length > 0) {
+      const item = (voipSolutions as any[]).find(c => c.id === id);
+      if (item) {
+        const exclVat = Number(item.resellerPriceExclVat ?? item.retailPriceExclVat ?? 0);
+        const inclVat = Number(item.resellerPriceInclVat ?? item.priceInclVat ?? exclVat * 1.15);
+        setCart([{ referenceId: id, itemType: "voip-solutions", name: item.name, unitPriceExclVat: exclVat, unitPriceInclVat: inclVat, quantity: 1 }]);
+        setTab("voip-solutions");
+      }
+      setPrefillApplied(true);
     }
-  }, [services, products, hostingPackages, domainTlds, prefillApplied]);
+  }, [services, products, hostingPackages, domainTlds, connectivity, cybersecurity, dataSecurity, webDevelopment, voipSolutions, prefillApplied]);
 
   // Domain checker state
   const [domainInput, setDomainInput] = useState("");

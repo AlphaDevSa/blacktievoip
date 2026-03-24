@@ -54,7 +54,7 @@ export default function ResellerCatalog() {
   const [domainResult, setDomainResult] = useState<DomainCheckResult | null>(null);
   const domainInputRef = useRef<HTMLInputElement>(null);
 
-  function orderItem(type: "service" | "product" | "hosting" | "domain", id: number) {
+  function orderItem(type: string, id: number) {
     setLocation(`/reseller/orders/new?add=${type}:${id}`);
   }
 
@@ -344,7 +344,10 @@ export default function ResellerCatalog() {
                         <div className="flex justify-between items-start mb-3"><div className="p-2 bg-blue-500/10 text-blue-400 rounded-lg"><Shield className="w-4 h-4" /></div><span className="text-[10px] font-semibold text-muted-foreground px-2 py-0.5 bg-muted/50 rounded-full">{(item as any).categoryName || "Cybersecurity"}</span></div>
                         <h3 className="font-display font-bold text-foreground mb-1.5">{item.name}</h3>
                         <p className="text-xs text-muted-foreground flex-1 mb-4 line-clamp-2">{item.description || "No description provided."}</p>
-                        <div className="pt-3 border-t border-border mt-auto"><div className="flex items-baseline justify-between"><span className="text-xs text-muted-foreground">per {item.unit} incl VAT</span><span className="text-xl font-bold text-foreground">{formatZar(inclVat)}</span></div></div>
+                        <div className="pt-3 border-t border-border mt-auto">
+                          <div className="flex items-baseline justify-between mb-2.5"><span className="text-xs text-muted-foreground">per {item.unit} incl VAT</span><span className="text-xl font-bold text-foreground">{formatZar(inclVat)}</span></div>
+                          <button onClick={() => orderItem("cybersecurity", item.id)} className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-md shadow-primary/20 hover:bg-primary/90 hover:-translate-y-0.5 transition-all"><ShoppingCart className="w-3.5 h-3.5" /> Order</button>
+                        </div>
                       </motion.div>
                     );
                   })}
@@ -363,7 +366,10 @@ export default function ResellerCatalog() {
                         <div className="flex justify-between items-start mb-3"><div className="p-2 bg-violet-500/10 text-violet-400 rounded-lg"><Lock className="w-4 h-4" /></div><span className="text-[10px] font-semibold text-muted-foreground px-2 py-0.5 bg-muted/50 rounded-full">{(item as any).categoryName || "Data Security"}</span></div>
                         <h3 className="font-display font-bold text-foreground mb-1.5">{item.name}</h3>
                         <p className="text-xs text-muted-foreground flex-1 mb-4 line-clamp-2">{item.description || "No description provided."}</p>
-                        <div className="pt-3 border-t border-border mt-auto"><div className="flex items-baseline justify-between"><span className="text-xs text-muted-foreground">per {item.unit} incl VAT</span><span className="text-xl font-bold text-foreground">{formatZar(inclVat)}</span></div></div>
+                        <div className="pt-3 border-t border-border mt-auto">
+                          <div className="flex items-baseline justify-between mb-2.5"><span className="text-xs text-muted-foreground">per {item.unit} incl VAT</span><span className="text-xl font-bold text-foreground">{formatZar(inclVat)}</span></div>
+                          <button onClick={() => orderItem("data-security", item.id)} className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-md shadow-primary/20 hover:bg-primary/90 hover:-translate-y-0.5 transition-all"><ShoppingCart className="w-3.5 h-3.5" /> Order</button>
+                        </div>
                       </motion.div>
                     );
                   })}
@@ -382,7 +388,10 @@ export default function ResellerCatalog() {
                         <div className="flex justify-between items-start mb-3"><div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg"><Globe className="w-4 h-4" /></div><span className="text-[10px] font-semibold text-muted-foreground px-2 py-0.5 bg-muted/50 rounded-full">{(item as any).categoryName || "Web Development"}</span></div>
                         <h3 className="font-display font-bold text-foreground mb-1.5">{item.name}</h3>
                         <p className="text-xs text-muted-foreground flex-1 mb-4 line-clamp-2">{item.description || "No description provided."}</p>
-                        <div className="pt-3 border-t border-border mt-auto"><div className="flex items-baseline justify-between"><span className="text-xs text-muted-foreground">per {item.unit} incl VAT</span><span className="text-xl font-bold text-foreground">{formatZar(inclVat)}</span></div></div>
+                        <div className="pt-3 border-t border-border mt-auto">
+                          <div className="flex items-baseline justify-between mb-2.5"><span className="text-xs text-muted-foreground">per {item.unit} incl VAT</span><span className="text-xl font-bold text-foreground">{formatZar(inclVat)}</span></div>
+                          <button onClick={() => orderItem("web-development", item.id)} className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-md shadow-primary/20 hover:bg-primary/90 hover:-translate-y-0.5 transition-all"><ShoppingCart className="w-3.5 h-3.5" /> Order</button>
+                        </div>
                       </motion.div>
                     );
                   })}
@@ -401,7 +410,10 @@ export default function ResellerCatalog() {
                         <div className="flex justify-between items-start mb-3"><div className="p-2 bg-orange-500/10 text-orange-400 rounded-lg"><Phone className="w-4 h-4" /></div><span className="text-[10px] font-semibold text-muted-foreground px-2 py-0.5 bg-muted/50 rounded-full">{(item as any).categoryName || "VoIP Solutions"}</span></div>
                         <h3 className="font-display font-bold text-foreground mb-1.5">{item.name}</h3>
                         <p className="text-xs text-muted-foreground flex-1 mb-4 line-clamp-2">{item.description || "No description provided."}</p>
-                        <div className="pt-3 border-t border-border mt-auto"><div className="flex items-baseline justify-between"><span className="text-xs text-muted-foreground">per {item.unit} incl VAT</span><span className="text-xl font-bold text-foreground">{formatZar(inclVat)}</span></div></div>
+                        <div className="pt-3 border-t border-border mt-auto">
+                          <div className="flex items-baseline justify-between mb-2.5"><span className="text-xs text-muted-foreground">per {item.unit} incl VAT</span><span className="text-xl font-bold text-foreground">{formatZar(inclVat)}</span></div>
+                          <button onClick={() => orderItem("voip-solutions", item.id)} className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-xs shadow-md shadow-primary/20 hover:bg-primary/90 hover:-translate-y-0.5 transition-all"><ShoppingCart className="w-3.5 h-3.5" /> Order</button>
+                        </div>
                       </motion.div>
                     );
                   })}
