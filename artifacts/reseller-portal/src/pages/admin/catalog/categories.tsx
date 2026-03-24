@@ -52,7 +52,7 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-  { id: "service",         label: "VoIP Services",   icon: Server,  color: "text-blue-500",   bgColor: "bg-blue-500/10",   queryKey: "/api/admin/service-categories" },
+  { id: "service",         label: "Services",        icon: Server,  color: "text-blue-500",   bgColor: "bg-blue-500/10",   queryKey: "/api/admin/service-categories" },
   { id: "connectivity",    label: "Connectivity",    icon: Network, color: "text-emerald-500", bgColor: "bg-emerald-500/10", queryKey: "/api/admin/connectivity-categories" },
   { id: "product",         label: "Hardware",        icon: Package, color: "text-amber-500",   bgColor: "bg-amber-500/10",  queryKey: "/api/admin/product-categories" },
   { id: "cybersecurity",   label: "Cybersecurity",   icon: Shield,  color: "text-blue-400",   bgColor: "bg-blue-400/10",   queryKey: "/api/admin/cybersecurity-categories" },
