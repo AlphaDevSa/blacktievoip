@@ -160,6 +160,12 @@ export default function ResellerNewOrder() {
     return /single[\s\-]?line/.test(hay);
   }
 
+  // Helper: identify PBX extension services (need DID, no bundle — just pick area code + number)
+  function isPbxExtensionService(service: Service): boolean {
+    const hay = `${service.name} ${(service as any).categoryName ?? ""}`.toLowerCase();
+    return /hosted\s*pbx.*ext|pbx\s*ext(ension)?|pbx\s+extension/.test(hay);
+  }
+
   // Helper: identify minute bundle services
   function isBundleService(service: Service): boolean {
     const hay = `${service.name} ${(service as any).categoryName ?? ""}`.toLowerCase();
@@ -593,7 +599,9 @@ export default function ResellerNewOrder() {
                     const inCart = cartQtyOf(service.id, "service");
                     const { exclVat, inclVat } = vatPrices(service as any);
                     const isSingleLine = isSingleLineService(service);
+                    const isPbxExt = isPbxExtensionService(service);
                     const needsDid = isVoipService(service) || isSingleLine;
+                    const isDidOnly = isSingleLine || isPbxExt; // no bundle step needed
                     const panelOpen = voipDidPanelServiceId === service.id;
                     return (
                       <div key={service.id} className={`rounded-xl border transition-colors ${panelOpen ? "border-primary/40 bg-primary/5" : "bg-muted/10 border-border/50 hover:border-primary/30"}`}>
@@ -607,7 +615,7 @@ export default function ResellerNewOrder() {
                                 <p className="font-semibold text-foreground text-sm truncate">{service.name}</p>
                                 {needsDid && (
                                   <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase tracking-wide">
-                                    {isSingleLine ? "Single Line" : "VoIP"}
+                                    {isPbxExt ? "PBX" : isSingleLine ? "Single Line" : "VoIP"}
                                   </span>
                                 )}
                               </div>
@@ -670,7 +678,7 @@ export default function ResellerNewOrder() {
                             const selectedBundle = voipBundleServiceId
                               ? bundleServices.find(s => s.id === voipBundleServiceId) ?? null
                               : null;
-                            const canConfirm = !!voipSelectedDidId && (isSingleLine || !!voipBundleServiceId);
+                            const canConfirm = !!voipSelectedDidId && (isDidOnly || !!voipBundleServiceId);
                             return (
                               <motion.div
                                 initial={{ opacity: 0, height: 0 }}
@@ -680,10 +688,11 @@ export default function ResellerNewOrder() {
                               >
                                 <div className="p-4 space-y-4 bg-background/50">
 
-                                  {/* Step indicators — 2-step for VoIP, 1-step for Single Line */}
-                                  {isSingleLine ? (
+                                  {/* Step indicators — 2-step for VoIP, 1-step for Single Line / PBX Extension */}
+                                  {isDidOnly ? (
                                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                                      <Phone className="w-3.5 h-3.5 text-primary" /> Assign a Phone Number
+                                      <Phone className="w-3.5 h-3.5 text-primary" />
+                                      {isPbxExt ? "Assign an Extension Number" : "Assign a Phone Number"}
                                     </p>
                                   ) : (
                                     <div className="flex items-center gap-2 text-xs font-semibold">
@@ -759,8 +768,8 @@ export default function ResellerNewOrder() {
                                     )}
                                   </div>
 
-                                  {/* ── Step 2: Minute Bundle (VoIP only, not single line) ── */}
-                                  {!isSingleLine && (
+                                  {/* ── Step 2: Minute Bundle (VoIP only, not single line / PBX extension) ── */}
+                                  {!isDidOnly && (
                                     <AnimatePresence>
                                       {voipSelectedDidId && (
                                         <motion.div
@@ -808,10 +817,10 @@ export default function ResellerNewOrder() {
                                   <div className="flex items-center justify-between pt-1 border-t border-border/50">
                                     <div className="text-xs text-muted-foreground">
                                       {selectedDid && <span className="font-semibold text-foreground">{selectedDid.number}</span>}
-                                      {selectedDid && !isSingleLine && selectedBundle && <span className="mx-1">+</span>}
-                                      {!isSingleLine && selectedBundle && <span className="font-semibold text-foreground">{selectedBundle.name}</span>}
-                                      {!selectedDid && <span>{isSingleLine ? "Select an area code and phone number to continue" : "Select DID and bundle to continue"}</span>}
-                                      {selectedDid && !isSingleLine && !selectedBundle && <span> — now select a minute bundle</span>}
+                                      {selectedDid && !isDidOnly && selectedBundle && <span className="mx-1">+</span>}
+                                      {!isDidOnly && selectedBundle && <span className="font-semibold text-foreground">{selectedBundle.name}</span>}
+                                      {!selectedDid && <span>{isPbxExt ? "Select an area code and extension number to continue" : isSingleLine ? "Select an area code and phone number to continue" : "Select DID and bundle to continue"}</span>}
+                                      {selectedDid && !isDidOnly && !selectedBundle && <span> — now select a minute bundle</span>}
                                     </div>
                                     <button
                                       disabled={!canConfirm}
@@ -819,7 +828,7 @@ export default function ResellerNewOrder() {
                                         if (!voipSelectedDidId) return;
                                         const did = (voipAvailableDids as Did[]).find((d: Did) => d.id === voipSelectedDidId);
                                         if (did) addToCart({ referenceId: did.id, itemType: "did", name: `DID ${did.number}`, unitPriceExclVat: didPriceExcl, unitPriceInclVat: didPriceIncl, quantity: 1 });
-                                        if (!isSingleLine && voipBundleServiceId) {
+                                        if (!isDidOnly && voipBundleServiceId) {
                                           const bundle = bundleServices.find(s => s.id === voipBundleServiceId);
                                           if (bundle) {
                                             const { exclVat: bExcl, inclVat: bIncl } = vatPrices(bundle as any);
