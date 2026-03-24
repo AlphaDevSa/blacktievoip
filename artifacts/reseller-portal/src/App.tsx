@@ -19,7 +19,6 @@ import AdminServicesCatalog from "@/pages/admin/catalog/services";
 import AdminProductsCatalog from "@/pages/admin/catalog/products";
 import AdminWebHostingCatalog from "@/pages/admin/catalog/hosting";
 import AdminDomainsCatalog from "@/pages/admin/catalog/domains";
-import AdminCategories from "@/pages/admin/catalog/categories";
 import AdminConnectivityCatalog from "@/pages/admin/catalog/connectivity";
 import AdminCybersecurityCatalog from "@/pages/admin/catalog/cybersecurity";
 import AdminDataSecurityCatalog from "@/pages/admin/catalog/data-security";
@@ -139,9 +138,6 @@ function Router() {
       </Route>
       <Route path="/admin/clients">
         {() => <ProtectedRoute role="admin" component={AdminClients} />}
-      </Route>
-      <Route path="/admin/categories">
-        {() => <ProtectedRoute role="admin" component={AdminCategories} />}
       </Route>
       <Route path="/admin/services-catalog">
         {() => <ProtectedRoute role="admin" component={AdminServicesCatalog} />}
